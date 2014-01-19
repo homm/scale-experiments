@@ -151,6 +151,7 @@ Bitmap *scale_bitmap(Bitmap *bmp, int scale)
       dst = &res->ptr[y * dstrow];\
       for (x = 0; x < dstrow; x += cc)\
       {\
+        size_t srcx = x * 4;\
         BODY\
       }\
     }
@@ -167,6 +168,7 @@ Bitmap *scale_bitmap(Bitmap *bmp, int scale)
       dst = &res->ptr[y * dstrow];\
       for (x = 0; x < dstrow; x += cc)\
       {\
+        size_t srcx = x * 6;\
         BODY\
       }\
     }
@@ -185,6 +187,7 @@ Bitmap *scale_bitmap(Bitmap *bmp, int scale)
       dst = &res->ptr[y * dstrow];\
       for (x = 0; x < dstrow; x += cc)\
       {\
+        size_t srcx = x * 8;\
         BODY\
       }\
     }
@@ -199,22 +202,22 @@ Bitmap *scale_bitmap(Bitmap *bmp, int scale)
                   src3[x*3 + c] + src3[x*3 + c + cc] + src3[x*3 + c + cc*2]) / 9
 
   #define SRC_COMPUTION_4X(c, src) \
-    src[x*4 + c] + src[x*4 + c + cc] + src[x*4 + c + cc*2] + src[x*4 + c + cc*3]
+    src[srcx + c] + src[srcx + c + cc] + src[srcx + c + cc*2] + src[srcx + c + cc*3]
   #define CHANEL_COMPUTION_4X(c) \
     dst[x + c] = (SRC_COMPUTION_4X(c, src1) + SRC_COMPUTION_4X(c, src2) +\
                   SRC_COMPUTION_4X(c, src3) + SRC_COMPUTION_4X(c, src4)) >> 4
 
   #define SRC_COMPUTION_6X(c, src) \
-    src[x*6 + c] + src[x*6 + c + cc] + src[x*6 + c + cc*2] +\
-    src[x*6 + c + cc*3] + src[x*6 + c + cc*4] + src[x*6 + c + cc*5]
+    src[srcx + c] + src[srcx + c + cc] + src[srcx + c + cc*2] +\
+    src[srcx + c + cc*3] + src[srcx + c + cc*4] + src[srcx + c + cc*5]
   #define CHANEL_COMPUTION_6X(c) \
     dst[x + c] = (SRC_COMPUTION_6X(c, src1) + SRC_COMPUTION_6X(c, src2) +\
                   SRC_COMPUTION_6X(c, src3) + SRC_COMPUTION_6X(c, src4) +\
                   SRC_COMPUTION_6X(c, src5) + SRC_COMPUTION_6X(c, src6)) / 36
 
   #define SRC_COMPUTION_8X(c, src) \
-    src[x*8 + c] + src[x*8 + c + cc] + src[x*8 + c + cc*2] + src[x*8 + c + cc*3] +\
-    src[x*8 + c + cc*4] + src[x*8 + c + cc*5] + src[x*8 + c + cc*6] + src[x*8 + c + cc*7]
+    src[srcx + c] + src[srcx + c + cc] + src[srcx + c + cc*2] + src[srcx + c + cc*3] +\
+    src[srcx + c + cc*4] + src[srcx + c + cc*5] + src[srcx + c + cc*6] + src[srcx + c + cc*7]
   #define CHANEL_COMPUTION_8X(c) \
     dst[x + c] = (SRC_COMPUTION_8X(c, src1) + SRC_COMPUTION_8X(c, src2) +\
                   SRC_COMPUTION_8X(c, src3) + SRC_COMPUTION_8X(c, src4) +\
