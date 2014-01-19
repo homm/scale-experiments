@@ -266,6 +266,59 @@ Bitmap *scale_bitmap(Bitmap *bmp, int scale)
 }
 
 
+Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
+{
+  Bitmap  *res;
+  uint8_t *src, *dst, *psrccoof;
+  uint32_t*psrcx;
+  size_t   srcrow, dstrow, cc;
+  size_t   x, y, xcc;
+  float    srcxres;
+
+  res = (Bitmap *)calloc(1, sizeof(Bitmap));
+  res->width = width;
+  res->height = bmp->height;
+  res->channels = bmp->channels;
+  res->ptr = malloc(res->width * res->height * res->channels);
+
+  cc = bmp->channels;
+  dstrow = res->width * cc;
+  srcrow = bmp->width * cc;
+
+  psrcx = malloc(sizeof(uint32_t) * width);
+  psrccoof = malloc(sizeof(uint8_t) * width);
+  srcxres = 256.0 * bmp->width / width;
+  for (x = 0; x < width; x+= 1)
+  {
+    uint32_t srcx = x * srcxres;
+    psrccoof[x] = srcx & 0xff;
+    psrcx[x] = (srcx >> 8) * cc;
+  }
+
+  switch (cc)
+  {
+    case 3:
+      for (y = 0; y < res->height; y++)
+      {
+        src = &bmp->ptr[y * srcrow];
+        dst = &res->ptr[y * dstrow];
+        for (x = 0, xcc = 0; x < width; x += 1, xcc += cc)
+        {
+          uint32_t srcx = psrcx[x];
+          uint8_t srccoof = psrccoof[x];
+          dst[xcc + 0] = (src[srcx + 0] * (255 - srccoof) + src[srcx + 0 + cc] * srccoof) >> 8;
+          dst[xcc + 1] = (src[srcx + 1] * (255 - srccoof) + src[srcx + 1 + cc] * srccoof) >> 8;
+          dst[xcc + 2] = (src[srcx + 2] * (255 - srccoof) + src[srcx + 2 + cc] * srccoof) >> 8;
+        }
+      }
+      break;
+  }
+
+  free(psrcx);
+  free(psrccoof);
+  return res;
+}
+
 int main(int argc, char **argv)
 {
   Bitmap *bmp;
