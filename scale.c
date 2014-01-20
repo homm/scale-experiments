@@ -1,4 +1,5 @@
 #include <time.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -276,7 +277,7 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
   uint32_t*psrcx;
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
-  float    srcxres;
+  double   srcxres;
 
   res = (Bitmap *)calloc(1, sizeof(Bitmap));
   res->width = width;
@@ -289,13 +290,19 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
   srcrow = bmp->width * cc;
 
   psrcx = malloc(sizeof(uint32_t) * width);
-  psrccoof = malloc(sizeof(uint8_t) * width);
-  srcxres = 256.0 * bmp->width / width;
+  psrccoof = malloc(sizeof(uint8_t) * width * 3);
+  srcxres = (double) bmp->width / width;
   for (x = 0; x < width; x+= 1)
   {
-    uint32_t srcx = x * srcxres;
-    psrccoof[x] = srcx & 0xff;
-    psrcx[x] = (srcx >> 8) * cc;
+    double srcx;
+    double coof = modf(x * srcxres, &srcx);
+    double srcnextx = (x + 1) * srcxres;
+    double srcweight = fmin(3.0, srcnextx - srcx) - coof;
+    psrcx[x] = ((uint32_t)srcx) * cc;
+    psrccoof[x * 3] = (uint8_t) round((fmin(1.0, srcnextx - srcx) - coof) / srcweight * 255.0);
+    psrccoof[x * 3 + 1] = (uint8_t) round(fmax(0.0, fmin(1.0, srcnextx - srcx - 1.0)) / srcweight * 255.0);
+    psrccoof[x * 3 + 2] = (uint8_t) round(fmax(0.0, fmin(1.0, srcnextx - srcx - 2.0)) / srcweight * 255.0);
+    // printf("%d\n", psrccoof[x * 3] + psrccoof[x * 3 + 1] + psrccoof[x * 3 + 2]);
   }
 
   switch (cc)
@@ -308,10 +315,18 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
         for (x = 0, xcc = 0; x < width; x += 1, xcc += cc)
         {
           uint32_t srcx = psrcx[x];
-          uint8_t srccoof = psrccoof[x];
-          dst[xcc + 0] = (src[srcx + 0] * (255 - srccoof) + src[srcx + 0 + cc] * srccoof) >> 8;
-          dst[xcc + 1] = (src[srcx + 1] * (255 - srccoof) + src[srcx + 1 + cc] * srccoof) >> 8;
-          dst[xcc + 2] = (src[srcx + 2] * (255 - srccoof) + src[srcx + 2 + cc] * srccoof) >> 8;
+          uint8_t  coof1 = psrccoof[xcc];
+          uint8_t  coof2 = psrccoof[xcc + 1];
+          uint8_t  coof3 = psrccoof[xcc + 2];
+          dst[xcc + 0] = (src[srcx + 0] * coof1 +\
+                          src[srcx + 0 + cc] * coof2 +
+                          src[srcx + 0 + cc*2] * coof3) / 255;
+          dst[xcc + 1] = (src[srcx + 1] * coof1 +
+                          src[srcx + 1 + cc] * coof2 +
+                          src[srcx + 1 + cc*2] * coof3) / 255;
+          dst[xcc + 2] = (src[srcx + 2] * coof1 +
+                          src[srcx + 2 + cc] * coof2 +
+                          src[srcx + 2 + cc*2] * coof3) / 255;
         }
       }
       break;
