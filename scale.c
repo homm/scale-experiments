@@ -278,7 +278,15 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
   uint32_t*psrcx;
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
-  double   srcxres;
+
+  double srcxres = (double) bmp->width / width;
+  if (srcxres < 1.0 || srcxres > 2.0)
+  {
+    printf("image width/new width proportion should be in range 1 to 2\n");
+    printf("with image width is %d and new width is %d it will be %f\n",
+      bmp->width, width, srcxres);
+    return NULL;
+  }
 
   res = (Bitmap *)calloc(1, sizeof(Bitmap));
   res->width = width;
@@ -292,17 +300,15 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
 
   psrcx = malloc(sizeof(uint32_t) * width);
   psrccoof = malloc(sizeof(uint16_t) * width * 3);
-  srcxres = (double) bmp->width / width;
   for (x = 0; x < width; x+= 1)
   {
     double srcx;
     double coof = modf(x * srcxres, &srcx);
     double srcnextx = (x + 1) * srcxres;
-    double srcweight = fmin(3.0, srcnextx - srcx) - coof;
     psrcx[x] = ((uint32_t)srcx) * cc;
-    psrccoof[x * 3] = (uint16_t) ((fmin(1.0, srcnextx - srcx) - coof) / srcweight * 4096.0);
-    psrccoof[x * 3 + 1] = (uint16_t) (fmax(0.0, fmin(1.0, srcnextx - srcx - 1.0)) / srcweight * 4096.0);
-    psrccoof[x * 3 + 2] = (uint16_t) (fmax(0.0, fmin(1.0, srcnextx - srcx - 2.0)) / srcweight * 4096.0);
+    psrccoof[x * 3] = (uint16_t) ((fmin(1.0, srcnextx - srcx) - coof) / srcxres * 4096.0);
+    psrccoof[x * 3 + 1] = (uint16_t) (fmax(0.0, fmin(1.0, srcnextx - srcx - 1.0)) / srcxres * 4096.0);
+    psrccoof[x * 3 + 2] = (uint16_t) (fmax(0.0, fmin(1.0, srcnextx - srcx - 2.0)) / srcxres * 4096.0);
     // printf("%d\n", psrccoof[x * 3] + psrccoof[x * 3 + 1] + psrccoof[x * 3 + 2]);
   }
 
@@ -365,6 +371,11 @@ int main(int argc, char **argv)
   for (i = 0; i < times; ++i)
   {
     res = linear_resize_bitmap(bmp, scale);
+    if ( ! res)
+    {
+      free_bitmap(bmp);
+      return 0;
+    }
     free_bitmap(res);
   }
   time = (float)(clock() - start) / CLOCKS_PER_SEC;
