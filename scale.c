@@ -274,16 +274,18 @@ double square_easing(double x) { return x * x; }
 double cubic_easing(double x) { return x * x * x; }
 
 
-Bitmap linear_resize_bitmap(Bitmap bmp, int width)
+Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
 {
   Bitmap   res;
-  uint8_t *src, *dst;
-  uint16_t*psrccoof;
+  uint8_t *src1, *src2, *src3, *dst;
+  uint16_t*psrcxcoof;
   uint32_t*psrcx;
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
+  double (*easing)(double) = square_easing;
 
   double srcxres = (double) bmp->width / width;
+  double srcyres = (double) bmp->height / height;
   if (srcxres < 1.0 || srcxres > 2.0)
   {
     printf("image width/new width proportion should be in range 1 to 2\n");
@@ -291,10 +293,17 @@ Bitmap linear_resize_bitmap(Bitmap bmp, int width)
       bmp->width, width, srcxres);
     return NULL;
   }
+  if (srcyres < 1.0 || srcyres > 2.0)
+  {
+    printf("image height/new height proportion should be in range 1 to 2\n");
+    printf("with image height is %d and new height is %d it will be %f\n",
+      bmp->height, height, srcyres);
+    return NULL;
+  }
 
   res = (Bitmap)calloc(1, sizeof(struct Bitmap));
   res->width = width;
-  res->height = bmp->height;
+  res->height = height;
   res->channels = bmp->channels;
   res->ptr = malloc(res->width * res->height * res->channels);
 
@@ -303,81 +312,102 @@ Bitmap linear_resize_bitmap(Bitmap bmp, int width)
   srcrow = bmp->width * cc;
 
   psrcx = malloc(sizeof(uint32_t) * width);
-  psrccoof = malloc(sizeof(uint16_t) * width * 3);
+  psrcxcoof = malloc(sizeof(uint16_t) * width * 3);
   for (x = 0; x < width; x+= 1)
   {
     double srcx, fract = modf(x * srcxres, &srcx);
     double srcxnext = (x + 1) * srcxres;
-    double coof1 = square_easing(1.0 - fract);
-    double coof2 = square_easing(fmin(1.0, srcxnext - srcx - 1.0));
-    double coof3 = square_easing(fmax(0.0, srcxnext - srcx - 2.0));
-    double coofsum = coof1 + coof2 + coof3;
+    double xcoof1 = easing(1.0 - fract);
+    double xcoof2 = easing(fmin(1.0, srcxnext - srcx - 1.0));
+    double xcoof3 = easing(fmax(0.0, srcxnext - srcx - 2.0));
+    double xcoofsum = xcoof1 + xcoof2 + xcoof3;
     psrcx[x] = (uint32_t)srcx * cc;
-    psrccoof[x * 3 + 0] = (uint16_t)(coof1 / coofsum * 4096.0);
-    psrccoof[x * 3 + 1] = (uint16_t)(coof2 / coofsum * 4096.0);
-    psrccoof[x * 3 + 2] = (uint16_t)(coof3 / coofsum * 4096.0);
+    psrcxcoof[x * 3 + 0] = (uint16_t)(xcoof1 / xcoofsum * 4096.0);
+    psrcxcoof[x * 3 + 1] = (uint16_t)(xcoof2 / xcoofsum * 4096.0);
+    psrcxcoof[x * 3 + 2] = (uint16_t)(xcoof3 / xcoofsum * 4096.0);
     // printf("%d\n", psrccoof[x * 3] + psrccoof[x * 3 + 1] + psrccoof[x * 3 + 2]);
   }
+
+  #define CHANEL_COMPUTION(c) \
+    dst[xcc + c] = (src1[srcx + c]        * xcoof1 * ycoof1 +\
+                    src1[srcx + c + cc]   * xcoof2 * ycoof1 +\
+                    src1[srcx + c + cc*2] * xcoof3 * ycoof1 +\
+                    src2[srcx + c]        * xcoof1 * ycoof2 +\
+                    src2[srcx + c + cc]   * xcoof2 * ycoof2 +\
+                    src2[srcx + c + cc*2] * xcoof3 * ycoof2 +\
+                    src3[srcx + c]        * xcoof1 * ycoof3 +\
+                    src3[srcx + c + cc]   * xcoof2 * ycoof3 +\
+                    src3[srcx + c + cc*2] * xcoof3 * ycoof3) >> 24;
 
   switch (cc)
   {
     case 3:
-      for (y = 0; y < res->height; y++)
+      for (y = 0; y < res->height - 1; y++)
       {
-        src = &bmp->ptr[y * srcrow];
+        double srcy, fract = modf(y * srcyres, &srcy);
+        double srcynext = (y + 1) * srcyres;
+        double ycoof1f = easing(1.0 - fract);
+        double ycoof2f = easing(fmin(1.0, srcynext - srcy - 1.0));
+        double ycoof3f = easing(fmax(0.0, srcynext - srcy - 2.0));
+        double ycoofsum = ycoof1f + ycoof2f + ycoof3f;
+        uint16_t ycoof1 = (uint16_t)(ycoof1f / ycoofsum * 4096.0);
+        uint16_t ycoof2 = (uint16_t)(ycoof2f / ycoofsum * 4096.0);
+        uint16_t ycoof3 = (uint16_t)(ycoof3f / ycoofsum * 4096.0);
+
+        src1 = &bmp->ptr[((uint32_t)srcy + 0) * srcrow];
+        src2 = &bmp->ptr[((uint32_t)srcy + 1) * srcrow];
+        src3 = &bmp->ptr[((uint32_t)srcy + 2) * srcrow];
         dst = &res->ptr[y * dstrow];
         for (x = 0, xcc = 0; x < width; x += 1, xcc += cc)
         {
           uint32_t srcx = psrcx[x];
-          uint16_t coof1 = psrccoof[xcc];
-          uint16_t coof2 = psrccoof[xcc + 1];
-          uint16_t coof3 = psrccoof[xcc + 2];
-          dst[xcc + 0] = (src[srcx + 0] * coof1 +\
-                          src[srcx + 0 + cc] * coof2 +
-                          src[srcx + 0 + cc*2] * coof3) >> 12;
-          dst[xcc + 1] = (src[srcx + 1] * coof1 +
-                          src[srcx + 1 + cc] * coof2 +
-                          src[srcx + 1 + cc*2] * coof3) >> 12;
-          dst[xcc + 2] = (src[srcx + 2] * coof1 +
-                          src[srcx + 2 + cc] * coof2 +
-                          src[srcx + 2 + cc*2] * coof3) >> 12;
+          uint16_t xcoof1 = psrcxcoof[x * 3];
+          uint16_t xcoof2 = psrcxcoof[x * 3 + 1];
+          uint16_t xcoof3 = psrcxcoof[x * 3 + 2];
+
+          CHANEL_COMPUTION(0);
+          CHANEL_COMPUTION(1);
+          CHANEL_COMPUTION(2);
         }
       }
       break;
   }
 
   free(psrcx);
-  free(psrccoof);
+  free(psrcxcoof);
   return res;
+  #undef CHANEL_COMPUTION
 }
 
 int main(int argc, char **argv)
 {
   Bitmap  bmp;
-  Bitmap  res;
+  Bitmap  res, res2;
   float   time;
   clock_t start;
-  int     i, scale, times = 50;
+  int     i, width, height, times = 50;
   char    buf[256];
 
-  if (argc < 3)
+  if (argc < 4)
   {
-    printf("usage: %s file.raw <scale> <runs>\n", argv[0]);
+    printf("usage: %s file.raw <width> <height> <times>\n", argv[0]);
     return 0;
   }
 
-  scale = atoi(argv[2]);
-  if (argc > 3)
+  width = atoi(argv[2]);
+  height = atoi(argv[3]);
+  if (argc > 4)
   {
-    times = atoi(argv[3]);
+    times = atoi(argv[4]);
   }
 
   bmp = load_bitmap(argv[1]);
 
+  res2 = scale_bitmap(bmp, 4);
   start = clock();
   for (i = 0; i < times; ++i)
   {
-    res = linear_resize_bitmap(bmp, scale);
+    res = linear_resize_bitmap(res2, width, height);
     if ( ! res)
     {
       free_bitmap(bmp);
@@ -386,13 +416,16 @@ int main(int argc, char **argv)
     free_bitmap(res);
   }
   time = (float)(clock() - start) / CLOCKS_PER_SEC;
+  free_bitmap(res2);
 
-  res = linear_resize_bitmap(bmp, scale);
+  res2 = scale_bitmap(bmp, 4);
+  res = linear_resize_bitmap(res2, width, height);
   snprintf(buf, sizeof buf, "%s.scaled.bmp", argv[1]);
   save_bitmap(buf, res);
 
   free_bitmap(bmp);
   free_bitmap(res);
+  free_bitmap(res2);
   printf("%d times completed in %f sec\n", times, time);
 
   return 0;
