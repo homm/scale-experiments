@@ -329,15 +329,10 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   }
 
   #define CHANEL_COMPUTION(c) \
-    dst[xcc + c] = (src1[srcx + c]        * xcoof1 * ycoof1 +\
-                    src1[srcx + c + cc]   * xcoof2 * ycoof1 +\
-                    src1[srcx + c + cc*2] * xcoof3 * ycoof1 +\
-                    src2[srcx + c]        * xcoof1 * ycoof2 +\
-                    src2[srcx + c + cc]   * xcoof2 * ycoof2 +\
-                    src2[srcx + c + cc*2] * xcoof3 * ycoof2 +\
-                    src3[srcx + c]        * xcoof1 * ycoof3 +\
-                    src3[srcx + c + cc]   * xcoof2 * ycoof3 +\
-                    src3[srcx + c + cc*2] * xcoof3 * ycoof3) >> 24;
+    dst[xcc + c] = (\
+      src1[srcx + c] * coof11 + src1[srcx + c + cc] * coof21 + src1[srcx + c + cc*2] * coof31 +\
+      src2[srcx + c] * coof12 + src2[srcx + c + cc] * coof22 + src2[srcx + c + cc*2] * coof32 +\
+      src3[srcx + c] * coof13 + src3[srcx + c + cc] * coof23 + src3[srcx + c + cc*2] * coof33) >> 24;
 
   switch (cc)
   {
@@ -361,9 +356,15 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
         for (x = 0, xcc = 0; x < width; x += 1, xcc += cc)
         {
           uint32_t srcx = psrcx[x];
-          uint16_t xcoof1 = psrcxcoof[x * 3];
-          uint16_t xcoof2 = psrcxcoof[x * 3 + 1];
-          uint16_t xcoof3 = psrcxcoof[x * 3 + 2];
+          uint32_t coof11 = psrcxcoof[x * 3] * ycoof1;
+          uint32_t coof12 = psrcxcoof[x * 3] * ycoof2;
+          uint32_t coof13 = psrcxcoof[x * 3] * ycoof3;
+          uint32_t coof21 = psrcxcoof[x * 3 + 1] * ycoof1;
+          uint32_t coof22 = psrcxcoof[x * 3 + 1] * ycoof2;
+          uint32_t coof23 = psrcxcoof[x * 3 + 1] * ycoof3;
+          uint32_t coof31 = psrcxcoof[x * 3 + 2] * ycoof1;
+          uint32_t coof32 = psrcxcoof[x * 3 + 2] * ycoof2;
+          uint32_t coof33 = psrcxcoof[x * 3 + 2] * ycoof3;
 
           CHANEL_COMPUTION(0);
           CHANEL_COMPUTION(1);
