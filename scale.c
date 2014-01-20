@@ -30,24 +30,24 @@ typedef struct
   uint32_t clrImportant; 
 } __attribute__((packed)) BITMAPINFOHEADER;
 
-typedef struct
+typedef struct Bitmap
 {
   size_t   width;
   size_t   height;
   size_t   channels;
   uint8_t *ptr;
-} Bitmap;
+} *Bitmap;
 
 
-void free_bitmap(Bitmap *bmp)
+void free_bitmap(Bitmap bmp)
 {
   free(bmp->ptr);
   free(bmp);
 }
 
-Bitmap *load_bitmap(char *path)
+Bitmap load_bitmap(char *path)
 {
-  Bitmap *res;
+  Bitmap  res;
   FILE   *file;
   size_t  rowsize, length, i;
   BITMAPFILEHEADER fileheader;
@@ -58,7 +58,7 @@ Bitmap *load_bitmap(char *path)
   length = fread(&infoheader, 1, sizeof(infoheader), file);
   rowsize = (infoheader.width * 3 + 3) >> 2 << 2;
 
-  res = (Bitmap *)calloc(1, sizeof(Bitmap));
+  res = (Bitmap)calloc(1, sizeof(struct Bitmap));
   res->channels = 3;
   res->width = infoheader.width;
   res->height = infoheader.height;
@@ -74,7 +74,7 @@ Bitmap *load_bitmap(char *path)
   return res;
 }
 
-void save_bitmap(char *path, Bitmap *bmp)
+void save_bitmap(char *path, Bitmap bmp)
 {
   FILE   *file;
   size_t  rowsize, length, i;
@@ -100,14 +100,14 @@ void save_bitmap(char *path, Bitmap *bmp)
   fclose(file);
 }
 
-Bitmap *scale_bitmap(Bitmap *bmp, int scale)
+Bitmap scale_bitmap(Bitmap bmp, int scale)
 {
-  Bitmap  *res;
+  Bitmap   res;
   uint8_t *src1, *src2, *src3, *src4, *src5, *src6, *src7, *src8, *dst;
   size_t   srcrow, dstrow, cc;
   size_t   x, y;
 
-  res = (Bitmap *)calloc(1, sizeof(Bitmap));
+  res = (Bitmap)calloc(1, sizeof(struct Bitmap));
   res->width = bmp->width / scale;
   res->height = bmp->height / scale;
   res->channels = bmp->channels;
@@ -274,9 +274,9 @@ double square_easing(double x) { return x * x; }
 double cubic_easing(double x) { return x * x * x; }
 
 
-Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
+Bitmap linear_resize_bitmap(Bitmap bmp, int width)
 {
-  Bitmap  *res;
+  Bitmap   res;
   uint8_t *src, *dst;
   uint16_t*psrccoof;
   uint32_t*psrcx;
@@ -292,7 +292,7 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
     return NULL;
   }
 
-  res = (Bitmap *)calloc(1, sizeof(Bitmap));
+  res = (Bitmap)calloc(1, sizeof(struct Bitmap));
   res->width = width;
   res->height = bmp->height;
   res->channels = bmp->channels;
@@ -353,8 +353,8 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
 
 int main(int argc, char **argv)
 {
-  Bitmap *bmp;
-  Bitmap *res;
+  Bitmap  bmp;
+  Bitmap  res;
   float   time;
   clock_t start;
   int     i, scale, times = 50;
