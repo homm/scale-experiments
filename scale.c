@@ -269,6 +269,10 @@ Bitmap *scale_bitmap(Bitmap *bmp, int scale)
   #undef CHANEL_COMPUTION_4X
 }
 
+double linear_easing(double x) { return x; }
+double square_easing(double x) { return x * x; }
+double cubic_easing(double x) { return x * x * x; }
+
 
 Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
 {
@@ -302,13 +306,16 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
   psrccoof = malloc(sizeof(uint16_t) * width * 3);
   for (x = 0; x < width; x+= 1)
   {
-    double srcx;
-    double coof = modf(x * srcxres, &srcx);
-    double srcnextx = (x + 1) * srcxres - srcx;
-    psrcx[x] = ((uint32_t)srcx) * cc;
-    psrccoof[x * 3] = (uint16_t) ((1.0 - coof) / srcxres * 4096.0);
-    psrccoof[x * 3 + 1] = (uint16_t) (fmin(1.0, srcnextx - 1.0) / srcxres * 4096.0);
-    psrccoof[x * 3 + 2] = (uint16_t) (fmax(0.0, srcnextx - 2.0) / srcxres * 4096.0);
+    double srcx, fract = modf(x * srcxres, &srcx);
+    double srcxnext = (x + 1) * srcxres;
+    double coof1 = square_easing(1.0 - fract);
+    double coof2 = square_easing(fmin(1.0, srcxnext - srcx - 1.0));
+    double coof3 = square_easing(fmax(0.0, srcxnext - srcx - 2.0));
+    double coofsum = coof1 + coof2 + coof3;
+    psrcx[x] = (uint32_t)srcx * cc;
+    psrccoof[x * 3 + 0] = (uint16_t)(coof1 / coofsum * 4096.0);
+    psrccoof[x * 3 + 1] = (uint16_t)(coof2 / coofsum * 4096.0);
+    psrccoof[x * 3 + 2] = (uint16_t)(coof3 / coofsum * 4096.0);
     // printf("%d\n", psrccoof[x * 3] + psrccoof[x * 3 + 1] + psrccoof[x * 3 + 2]);
   }
 
