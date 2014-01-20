@@ -304,11 +304,11 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
   {
     double srcx;
     double coof = modf(x * srcxres, &srcx);
-    double srcnextx = (x + 1) * srcxres;
+    double srcnextx = (x + 1) * srcxres - srcx;
     psrcx[x] = ((uint32_t)srcx) * cc;
-    psrccoof[x * 3] = (uint16_t) ((fmin(1.0, srcnextx - srcx) - coof) / srcxres * 4096.0);
-    psrccoof[x * 3 + 1] = (uint16_t) (fmax(0.0, fmin(1.0, srcnextx - srcx - 1.0)) / srcxres * 4096.0);
-    psrccoof[x * 3 + 2] = (uint16_t) (fmax(0.0, fmin(1.0, srcnextx - srcx - 2.0)) / srcxres * 4096.0);
+    psrccoof[x * 3] = (uint16_t) ((1.0 - coof) / srcxres * 4096.0);
+    psrccoof[x * 3 + 1] = (uint16_t) (fmin(1.0, srcnextx - 1.0) / srcxres * 4096.0);
+    psrccoof[x * 3 + 2] = (uint16_t) (fmax(0.0, srcnextx - 2.0) / srcxres * 4096.0);
     // printf("%d\n", psrccoof[x * 3] + psrccoof[x * 3 + 1] + psrccoof[x * 3 + 2]);
   }
 
