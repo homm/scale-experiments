@@ -273,7 +273,8 @@ Bitmap *scale_bitmap(Bitmap *bmp, int scale)
 Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
 {
   Bitmap  *res;
-  uint8_t *src, *dst, *psrccoof;
+  uint8_t *src, *dst;
+  uint16_t*psrccoof;
   uint32_t*psrcx;
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
@@ -290,7 +291,7 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
   srcrow = bmp->width * cc;
 
   psrcx = malloc(sizeof(uint32_t) * width);
-  psrccoof = malloc(sizeof(uint8_t) * width * 3);
+  psrccoof = malloc(sizeof(uint16_t) * width * 3);
   srcxres = (double) bmp->width / width;
   for (x = 0; x < width; x+= 1)
   {
@@ -299,9 +300,9 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
     double srcnextx = (x + 1) * srcxres;
     double srcweight = fmin(3.0, srcnextx - srcx) - coof;
     psrcx[x] = ((uint32_t)srcx) * cc;
-    psrccoof[x * 3] = (uint8_t) round((fmin(1.0, srcnextx - srcx) - coof) / srcweight * 255.0);
-    psrccoof[x * 3 + 1] = (uint8_t) round(fmax(0.0, fmin(1.0, srcnextx - srcx - 1.0)) / srcweight * 255.0);
-    psrccoof[x * 3 + 2] = (uint8_t) round(fmax(0.0, fmin(1.0, srcnextx - srcx - 2.0)) / srcweight * 255.0);
+    psrccoof[x * 3] = (uint16_t) ((fmin(1.0, srcnextx - srcx) - coof) / srcweight * 4096.0);
+    psrccoof[x * 3 + 1] = (uint16_t) (fmax(0.0, fmin(1.0, srcnextx - srcx - 1.0)) / srcweight * 4096.0);
+    psrccoof[x * 3 + 2] = (uint16_t) (fmax(0.0, fmin(1.0, srcnextx - srcx - 2.0)) / srcweight * 4096.0);
     // printf("%d\n", psrccoof[x * 3] + psrccoof[x * 3 + 1] + psrccoof[x * 3 + 2]);
   }
 
@@ -315,18 +316,18 @@ Bitmap *linear_resize_bitmap(Bitmap *bmp, int width)
         for (x = 0, xcc = 0; x < width; x += 1, xcc += cc)
         {
           uint32_t srcx = psrcx[x];
-          uint8_t  coof1 = psrccoof[xcc];
-          uint8_t  coof2 = psrccoof[xcc + 1];
-          uint8_t  coof3 = psrccoof[xcc + 2];
+          uint16_t coof1 = psrccoof[xcc];
+          uint16_t coof2 = psrccoof[xcc + 1];
+          uint16_t coof3 = psrccoof[xcc + 2];
           dst[xcc + 0] = (src[srcx + 0] * coof1 +\
                           src[srcx + 0 + cc] * coof2 +
-                          src[srcx + 0 + cc*2] * coof3) / 255;
+                          src[srcx + 0 + cc*2] * coof3) >> 12;
           dst[xcc + 1] = (src[srcx + 1] * coof1 +
                           src[srcx + 1 + cc] * coof2 +
-                          src[srcx + 1 + cc*2] * coof3) / 255;
+                          src[srcx + 1 + cc*2] * coof3) >> 12;
           dst[xcc + 2] = (src[srcx + 2] * coof1 +
                           src[srcx + 2 + cc] * coof2 +
-                          src[srcx + 2 + cc*2] * coof3) / 255;
+                          src[srcx + 2 + cc*2] * coof3) >> 12;
         }
       }
       break;
