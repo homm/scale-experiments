@@ -76,7 +76,7 @@ Bitmap load_bitmap(char *path)
   return res;
 }
 
-void save_bitmap(char *path, Bitmap bmp)
+void save_bitmap(Bitmap bmp, char *path)
 {
   FILE   *file;
   size_t  rowsize, length, i;
@@ -384,6 +384,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   uint32_t*pdstx;
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
+  size_t lastrow = 0;
 
   size_t bmp_width = bmp->width;
   double xres = (double) width / bmp->width;
@@ -404,9 +405,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
 
   #define COOF_COMPUTION(dim, res) \
     double dst_coord, fract = modf(dim * res, &dst_coord);\
-    double dst_overlap = (dim + 1) * res - dst_coord;\
-    double coof1f = fmin(1.0, dst_overlap) - fract;\
-    double coof2f = fabs(res - coof1f);
+    double coof1f = fmin(1.0, fract + res) - fract;\
+    double coof2f = res - coof1f;
 
   pdstx = calloc(bmp->width, sizeof(uint32_t));
   pdstxcoof = calloc(bmp->width * 2, sizeof(uint16_t));
@@ -433,25 +433,10 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
         uint16_t ycoof1 = coof1f * 4096.0 + .5;
         uint16_t ycoof2 = coof2f * 4096.0 + .5;
 
-        src = &bmp->ptr[y * srcrow];
-        for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
-        {
-          uint16_t xcoof1 = pdstxcoof[x*2 + 0];
-          uint16_t xcoof2 = pdstxcoof[x*2 + 1];
-          uint32_t coof11 = ycoof1 * xcoof1;
-          uint32_t coof12 = ycoof1 * xcoof2;
-          uint32_t coof21 = ycoof2 * xcoof1;
-          uint32_t coof22 = ycoof2 * xcoof2;
-          uint32_t dstx = pdstx[x];
-
-          CHANEL_COMPUTION(0);
-          CHANEL_COMPUTION(1);
-          CHANEL_COMPUTION(2);
-        }
         // commit
-        if (dst_overlap >= 1.0)
+        if ((size_t) dst_coord > lastrow)
         {
-          dst = &res->ptr[(uint32_t)dst_coord * dstrow];
+          dst = &res->ptr[lastrow * dstrow];
           for (x = 0; x < dstrow; x += 1)
           {
             dst[x] = buf1[x] + 4096 * 4096 / 2 >> 24;
@@ -459,6 +444,28 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
           memset(buf1, 0, sizeof(uint32_t) * (width + 1) * cc);
           buf3 = buf1; buf1 = buf2; buf2 = buf3;
         }
+        lastrow = dst_coord;
+
+        src = &bmp->ptr[y * srcrow];
+        for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
+        {
+          uint32_t dstx = pdstx[x];
+          uint16_t xcoof1 = pdstxcoof[x*2 + 0];
+          uint16_t xcoof2 = pdstxcoof[x*2 + 1];
+          uint32_t coof11 = ycoof1 * xcoof1;
+          uint32_t coof12 = ycoof1 * xcoof2;
+          uint32_t coof21 = ycoof2 * xcoof1;
+          uint32_t coof22 = ycoof2 * xcoof2;
+
+          CHANEL_COMPUTION(0);
+          CHANEL_COMPUTION(1);
+          CHANEL_COMPUTION(2);
+        }
+      }
+      dst = &res->ptr[lastrow * dstrow];
+      for (x = 0; x < dstrow; x += 1)
+      {
+        dst[x] = buf1[x] + 4096 * 4096 / 2 >> 24;
       }
       break;
   }
@@ -469,6 +476,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   free(pdstxcoof);
   return res;
   #undef COOF_COMPUTION
+  #undef CHANEL_COMPUTION
 }
 
 
@@ -478,19 +486,18 @@ int main(int argc, char **argv)
   float   time;
   clock_t start;
   int     i, width, height, times = 50;
-  char    buf[256];
 
   if (argc < 4)
   {
-    printf("usage: %s file.raw <width> <height> <times>\n", argv[0]);
+    printf("usage: %s input.bmp output.bmp <width> <height> <times>\n", argv[0]);
     return 0;
   }
 
-  width = atoi(argv[2]);
-  height = atoi(argv[3]);
-  if (argc > 4)
+  width = atoi(argv[3]);
+  height = atoi(argv[4]);
+  if (argc > 5)
   {
-    times = atoi(argv[4]);
+    times = atoi(argv[5]);
   }
 
   bmp = load_bitmap(argv[1]);
@@ -500,6 +507,7 @@ int main(int argc, char **argv)
   {
     res = bmp;
     bmp = inverse_resize_bitmap(bmp, width - i, height - i);
+    // bmp = linear_resize_bitmap(bmp, width - i, height - i);
     free_bitmap(res);
     if ( ! bmp)
     {
@@ -508,8 +516,7 @@ int main(int argc, char **argv)
   }
   time = (float)(clock() - start) / CLOCKS_PER_SEC;
 
-  snprintf(buf, sizeof buf, "%s.scaled.bmp", argv[1]);
-  save_bitmap(buf, bmp);
+  save_bitmap(bmp, argv[2]);
 
   free_bitmap(bmp);
   printf("%d times completed in %f sec\n", times, time);
