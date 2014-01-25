@@ -323,9 +323,9 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   for (x = 0; x < width; x+= 1)
   {
     COOF_COMPUTION(x, srcxres);
-    psrcxcoof[x * 3 + 0] = coof1f / coofsum * 4096.0;
-    psrcxcoof[x * 3 + 1] = coof2f / coofsum * 4096.0;
-    psrcxcoof[x * 3 + 2] = coof3f / coofsum * 4096.0;
+    psrcxcoof[x * 3 + 0] = coof1f / coofsum * 4096.0 + .33;
+    psrcxcoof[x * 3 + 1] = coof2f / coofsum * 4096.0 + .33;
+    psrcxcoof[x * 3 + 2] = coof3f / coofsum * 4096.0 + .33;
 
     psrcx[x] = src_coord * cc;
   }
@@ -343,9 +343,9 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
       for (y = 0; y < res->height - 1; y++)
       {
         COOF_COMPUTION(y, srcyres);
-        uint16_t ycoof1 = coof1f / coofsum * 4096.0;
-        uint16_t ycoof2 = coof2f / coofsum * 4096.0;
-        uint16_t ycoof3 = coof3f / coofsum * 4096.0;
+        uint16_t ycoof1 = coof1f / coofsum * 4096.0 + .33;
+        uint16_t ycoof2 = coof2f / coofsum * 4096.0 + .33;
+        uint16_t ycoof3 = coof3f / coofsum * 4096.0 + .33;
 
         src1 = &bmp->ptr[((uint32_t)src_coord + 0) * srcrow];
         src2 = &bmp->ptr[((uint32_t)src_coord + 1) * srcrow];
