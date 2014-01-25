@@ -379,16 +379,16 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
 {
   Bitmap   res;
   uint8_t *src, *dst;
-  float   *buf1, *buf2, *buf3;
-  float   *pdstxcoof;
+  uint32_t*buf1, *buf2, *buf3;
+  uint16_t*pdstxcoof;
   uint32_t*pdstx;
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
-  double (*easing)(double) = linear_easing;
 
+  size_t bmp_width = bmp->width;
   double xres = (double) width / bmp->width;
   double yres = (double) height / bmp->height;
-  
+
   res = (Bitmap)calloc(1, sizeof(struct Bitmap));
   res->width = width;
   res->height = height;
@@ -399,31 +399,30 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   dstrow = res->width * cc;
   srcrow = bmp->width * cc;
 
-  buf1 = calloc((width + 1) * cc, sizeof(float));
-  buf2 = calloc((width + 1) * cc, sizeof(float));
+  buf1 = calloc((width + 1) * cc, sizeof(uint32_t));
+  buf2 = calloc((width + 1) * cc, sizeof(uint32_t));
 
   #define COOF_COMPUTION(dim, res) \
-    double src_coord, fract = modf(dim * res, &src_coord);\
-    double src_overlap = (dim + 1) * res - src_coord;\
-    double coof1f = easing(1.0 - fract);\
-    double coof2f = easing(fmax(0.0, src_overlap - 1.0));\
-    double coofsum = coof1f + coof2f;
+    double dst_coord, fract = modf(dim * res, &dst_coord);\
+    double dst_overlap = (dim + 1) * res - dst_coord;\
+    double coof1f = fmin(1.0, dst_overlap) - fract;\
+    double coof2f = fabs(res - coof1f);
 
-  pdstx = malloc(sizeof(uint32_t) * bmp->width);
-  pdstxcoof = malloc(sizeof(float) * bmp->width * 2);
-  for (x = 0; x < bmp->width; x+= 1)
+  pdstx = calloc(bmp->width, sizeof(uint32_t));
+  pdstxcoof = calloc(bmp->width * 2, sizeof(uint16_t));
+  for (x = 0; x < bmp_width; x+= 1)
   {
     COOF_COMPUTION(x, xres);
-    pdstxcoof[x*2 + 0] = coof1f / coofsum;
-    pdstxcoof[x*2 + 1] = coof2f / coofsum;
-    pdstx[x] = src_coord * cc;
+    pdstxcoof[x*2 + 0] = coof1f * 4096.0 + .5;
+    pdstxcoof[x*2 + 1] = coof2f * 4096.0 + .5;
+    pdstx[x] = dst_coord * cc;
   }
 
   #define CHANEL_COMPUTION(c) \
-    buf1[dstx + c     ] += src[xcc + c] * ycoof1 * xcoof1;\
-    buf1[dstx + c + cc] += src[xcc + c] * ycoof1 * xcoof2;\
-    buf2[dstx + c     ] += src[xcc + c] * ycoof2 * xcoof1;\
-    buf2[dstx + c + cc] += src[xcc + c] * ycoof2 * xcoof2;
+    buf1[dstx + c     ] += src[xcc + c] * coof11;\
+    buf1[dstx + c + cc] += src[xcc + c] * coof12;\
+    buf2[dstx + c     ] += src[xcc + c] * coof21;\
+    buf2[dstx + c + cc] += src[xcc + c] * coof22;
 
   switch (cc)
   {
@@ -431,31 +430,33 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
       for (y = 0; y < bmp->height; y++)
       {
         COOF_COMPUTION(y, yres);
-        float ycoof1 = coof1f / coofsum;
-        float ycoof2 = coof2f / coofsum;
+        uint16_t ycoof1 = coof1f * 4096.0 + .5;
+        uint16_t ycoof2 = coof2f * 4096.0 + .5;
 
         src = &bmp->ptr[y * srcrow];
-        for (x = 0, xcc = 0; x < bmp->width; x += 1, xcc += cc)
+        for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
         {
+          uint16_t xcoof1 = pdstxcoof[x*2 + 0];
+          uint16_t xcoof2 = pdstxcoof[x*2 + 1];
+          uint32_t coof11 = ycoof1 * xcoof1;
+          uint32_t coof12 = ycoof1 * xcoof2;
+          uint32_t coof21 = ycoof2 * xcoof1;
+          uint32_t coof22 = ycoof2 * xcoof2;
           uint32_t dstx = pdstx[x];
-          float xcoof1 = pdstxcoof[x*2 + 0];
-          float xcoof2 = pdstxcoof[x*2 + 1];
 
           CHANEL_COMPUTION(0);
           CHANEL_COMPUTION(1);
           CHANEL_COMPUTION(2);
         }
         // commit
-        if (src_overlap >= 1.0)
+        if (dst_overlap >= 1.0)
         {
-          dst = &res->ptr[(uint32_t)src_coord * dstrow];
-          for (x = 0; x < width * cc; x += cc)
+          dst = &res->ptr[(uint32_t)dst_coord * dstrow];
+          for (x = 0; x < dstrow; x += 1)
           {
-            dst[x + 0] = buf1[x + 0] * xres * yres;
-            dst[x + 1] = buf1[x + 1] * xres * yres;
-            dst[x + 2] = buf1[x + 2] * xres * yres;
+            dst[x] = buf1[x] + 4096 * 4096 / 2 >> 24;
           }
-          memset(buf1, 0, sizeof(float) * (width + 1) * cc);
+          memset(buf1, 0, sizeof(uint32_t) * (width + 1) * cc);
           buf3 = buf1; buf1 = buf2; buf2 = buf3;
         }
       }
