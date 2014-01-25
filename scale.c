@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <string.h>
 
 
 typedef struct
@@ -370,6 +371,102 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   free(psrcxcoof);
   return res;
   #undef CHANEL_COMPUTION
+  #undef COOF_COMPUTION
+}
+
+
+Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
+{
+  Bitmap   res;
+  uint8_t *src, *dst;
+  float   *buf1, *buf2, *buf3;
+  float   *pdstxcoof;
+  uint32_t*pdstx;
+  size_t   srcrow, dstrow, cc;
+  size_t   x, y, xcc;
+  double (*easing)(double) = linear_easing;
+
+  double xres = (double) width / bmp->width;
+  double yres = (double) height / bmp->height;
+  
+  res = (Bitmap)calloc(1, sizeof(struct Bitmap));
+  res->width = width;
+  res->height = height;
+  res->channels = bmp->channels;
+  res->ptr = malloc(res->width * res->height * res->channels);
+
+  cc = bmp->channels;
+  dstrow = res->width * cc;
+  srcrow = bmp->width * cc;
+
+  buf1 = calloc((width + 1) * cc, sizeof(float));
+  buf2 = calloc((width + 1) * cc, sizeof(float));
+
+  #define COOF_COMPUTION(dim, res) \
+    double src_coord, fract = modf(dim * res, &src_coord);\
+    double src_overlap = (dim + 1) * res - src_coord;\
+    double coof1f = easing(1.0 - fract);\
+    double coof2f = easing(fmax(0.0, src_overlap - 1.0));\
+    double coofsum = coof1f + coof2f;
+
+  pdstx = malloc(sizeof(uint32_t) * bmp->width);
+  pdstxcoof = malloc(sizeof(float) * bmp->width * 2);
+  for (x = 0; x < bmp->width; x+= 1)
+  {
+    COOF_COMPUTION(x, xres);
+    pdstxcoof[x*2 + 0] = coof1f / coofsum;
+    pdstxcoof[x*2 + 1] = coof2f / coofsum;
+    pdstx[x] = src_coord * cc;
+  }
+
+  #define CHANEL_COMPUTION(c) \
+    buf1[dstx + c     ] += src[xcc + c] * ycoof1 * xcoof1;\
+    buf1[dstx + c + cc] += src[xcc + c] * ycoof1 * xcoof2;\
+    buf2[dstx + c     ] += src[xcc + c] * ycoof2 * xcoof1;\
+    buf2[dstx + c + cc] += src[xcc + c] * ycoof2 * xcoof2;
+
+  switch (cc)
+  {
+    case 3:
+      for (y = 0; y < bmp->height; y++)
+      {
+        COOF_COMPUTION(y, yres);
+        float ycoof1 = coof1f / coofsum;
+        float ycoof2 = coof2f / coofsum;
+
+        src = &bmp->ptr[y * srcrow];
+        for (x = 0, xcc = 0; x < bmp->width; x += 1, xcc += cc)
+        {
+          uint32_t dstx = pdstx[x];
+          float xcoof1 = pdstxcoof[x*2 + 0];
+          float xcoof2 = pdstxcoof[x*2 + 1];
+
+          CHANEL_COMPUTION(0);
+          CHANEL_COMPUTION(1);
+          CHANEL_COMPUTION(2);
+        }
+        // commit
+        if (src_overlap >= 1.0)
+        {
+          dst = &res->ptr[(uint32_t)src_coord * dstrow];
+          for (x = 0; x < width * cc; x += cc)
+          {
+            dst[x + 0] = buf1[x + 0] * xres * yres;
+            dst[x + 1] = buf1[x + 1] * xres * yres;
+            dst[x + 2] = buf1[x + 2] * xres * yres;
+          }
+          memset(buf1, 0, sizeof(float) * (width + 1) * cc);
+          buf3 = buf1; buf1 = buf2; buf2 = buf3;
+        }
+      }
+      break;
+  }
+
+  free(buf1);
+  free(buf2);
+  free(pdstx);
+  free(pdstxcoof);
+  return res;
   #undef COOF_COMPUTION
 }
 
