@@ -331,7 +331,8 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     dst[xcc + c] = (\
       src1[srcx + c] * coof11 + src1[srcx + c + cc] * coof21 + src1[srcx + c + cc*2] * coof31 +\
       src2[srcx + c] * coof12 + src2[srcx + c + cc] * coof22 + src2[srcx + c + cc*2] * coof32 +\
-      src3[srcx + c] * coof13 + src3[srcx + c + cc] * coof23 + src3[srcx + c + cc*2] * coof33) >> 24;
+      src3[srcx + c] * coof13 + src3[srcx + c + cc] * coof23 + src3[srcx + c + cc*2] * coof33 +\
+      4096 * 4096 / 2) >> 24;
 
   switch (cc)
   {
