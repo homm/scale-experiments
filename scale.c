@@ -317,16 +317,16 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     double coof1f = easing(1.0 - fract);\
     double coof2f = easing(fmin(1.0, src_overlap - 1.0));\
     double coof3f = easing(fmax(0.0, src_overlap - 2.0));\
-    double coofsum = coof1f + coof2f + coof3f;\
+    double coofsum = coof1f + coof2f + coof3f;
 
   psrcx = malloc(sizeof(uint32_t) * width);
   psrcxcoof = malloc(sizeof(uint16_t) * width * 3);
   for (x = 0; x < width; x+= 1)
   {
     COOF_COMPUTION(x, srcxres);
-    psrcxcoof[x * 3 + 0] = coof1f / coofsum * 4096.0 + .33;
-    psrcxcoof[x * 3 + 1] = coof2f / coofsum * 4096.0 + .33;
-    psrcxcoof[x * 3 + 2] = coof3f / coofsum * 4096.0 + .33;
+    psrcxcoof[x*3 + 0] = coof1f / coofsum * 4096.0 + .33;
+    psrcxcoof[x*3 + 1] = coof2f / coofsum * 4096.0 + .33;
+    psrcxcoof[x*3 + 2] = coof3f / coofsum * 4096.0 + .33;
 
     psrcx[x] = src_coord * cc;
   }
@@ -470,10 +470,10 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   #undef COOF_COMPUTION
 }
 
+
 int main(int argc, char **argv)
 {
-  Bitmap  bmp;
-  Bitmap  res, res2;
+  Bitmap  bmp, res;
   float   time;
   clock_t start;
   int     i, width, height, times = 50;
@@ -494,29 +494,23 @@ int main(int argc, char **argv)
 
   bmp = load_bitmap(argv[1]);
 
-  res2 = scale_bitmap(bmp, 4);
   start = clock();
   for (i = 0; i < times; ++i)
   {
-    res = linear_resize_bitmap(res2, width, height);
-    if ( ! res)
+    res = bmp;
+    bmp = inverse_resize_bitmap(bmp, width - i, height - i);
+    free_bitmap(res);
+    if ( ! bmp)
     {
-      free_bitmap(bmp);
       return 0;
     }
-    free_bitmap(res);
   }
   time = (float)(clock() - start) / CLOCKS_PER_SEC;
-  free_bitmap(res2);
 
-  res2 = scale_bitmap(bmp, 4);
-  res = linear_resize_bitmap(res2, width, height);
   snprintf(buf, sizeof buf, "%s.scaled.bmp", argv[1]);
-  save_bitmap(buf, res);
+  save_bitmap(buf, bmp);
 
   free_bitmap(bmp);
-  free_bitmap(res);
-  free_bitmap(res2);
   printf("%d times completed in %f sec\n", times, time);
 
   return 0;
