@@ -310,21 +310,24 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   dstrow = res->width * cc;
   srcrow = bmp->width * cc;
 
+  #define COOF_COMPUTION(dim, res) \
+    double src_coord, fract = modf(dim * res, &src_coord);\
+    double src_overlap = (dim + 1) * res - src_coord;\
+    double coof1f = easing(1.0 - fract);\
+    double coof2f = easing(fmin(1.0, src_overlap - 1.0));\
+    double coof3f = easing(fmax(0.0, src_overlap - 2.0));\
+    double coofsum = coof1f + coof2f + coof3f;\
+
   psrcx = malloc(sizeof(uint32_t) * width);
   psrcxcoof = malloc(sizeof(uint16_t) * width * 3);
   for (x = 0; x < width; x+= 1)
   {
-    double srcx, fract = modf(x * srcxres, &srcx);
-    double srcxnext = (x + 1) * srcxres;
-    double xcoof1 = easing(1.0 - fract);
-    double xcoof2 = easing(fmin(1.0, srcxnext - srcx - 1.0));
-    double xcoof3 = easing(fmax(0.0, srcxnext - srcx - 2.0));
-    double xcoofsum = xcoof1 + xcoof2 + xcoof3;
-    psrcx[x] = (uint32_t)srcx * cc;
-    psrcxcoof[x * 3 + 0] = (uint16_t)(xcoof1 / xcoofsum * 4096.0);
-    psrcxcoof[x * 3 + 1] = (uint16_t)(xcoof2 / xcoofsum * 4096.0);
-    psrcxcoof[x * 3 + 2] = (uint16_t)(xcoof3 / xcoofsum * 4096.0);
-    // printf("%d\n", psrccoof[x * 3] + psrccoof[x * 3 + 1] + psrccoof[x * 3 + 2]);
+    COOF_COMPUTION(x, srcxres);
+    psrcxcoof[x * 3 + 0] = coof1f / coofsum * 4096.0;
+    psrcxcoof[x * 3 + 1] = coof2f / coofsum * 4096.0;
+    psrcxcoof[x * 3 + 2] = coof3f / coofsum * 4096.0;
+
+    psrcx[x] = src_coord * cc;
   }
 
   #define CHANEL_COMPUTION(c) \
@@ -339,19 +342,14 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     case 3:
       for (y = 0; y < res->height - 1; y++)
       {
-        double srcy, fract = modf(y * srcyres, &srcy);
-        double srcynext = (y + 1) * srcyres;
-        double ycoof1f = easing(1.0 - fract);
-        double ycoof2f = easing(fmin(1.0, srcynext - srcy - 1.0));
-        double ycoof3f = easing(fmax(0.0, srcynext - srcy - 2.0));
-        double ycoofsum = ycoof1f + ycoof2f + ycoof3f;
-        uint16_t ycoof1 = (uint16_t)(ycoof1f / ycoofsum * 4096.0);
-        uint16_t ycoof2 = (uint16_t)(ycoof2f / ycoofsum * 4096.0);
-        uint16_t ycoof3 = (uint16_t)(ycoof3f / ycoofsum * 4096.0);
+        COOF_COMPUTION(y, srcyres);
+        uint16_t ycoof1 = coof1f / coofsum * 4096.0;
+        uint16_t ycoof2 = coof2f / coofsum * 4096.0;
+        uint16_t ycoof3 = coof3f / coofsum * 4096.0;
 
-        src1 = &bmp->ptr[((uint32_t)srcy + 0) * srcrow];
-        src2 = &bmp->ptr[((uint32_t)srcy + 1) * srcrow];
-        src3 = &bmp->ptr[((uint32_t)srcy + 2) * srcrow];
+        src1 = &bmp->ptr[((uint32_t)src_coord + 0) * srcrow];
+        src2 = &bmp->ptr[((uint32_t)src_coord + 1) * srcrow];
+        src3 = &bmp->ptr[((uint32_t)src_coord + 2) * srcrow];
         dst = &res->ptr[y * dstrow];
         for (x = 0, xcc = 0; x < width; x += 1, xcc += cc)
         {
@@ -372,6 +370,7 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   free(psrcxcoof);
   return res;
   #undef CHANEL_COMPUTION
+  #undef COOF_COMPUTION
 }
 
 int main(int argc, char **argv)
