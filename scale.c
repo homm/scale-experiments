@@ -61,9 +61,10 @@ Bitmap load_bitmap(char *path)
   res = (Bitmap)calloc(1, sizeof(struct Bitmap));
   res->channels = 3;
   res->width = infoheader.width;
-  res->height = infoheader.height;
+  res->height = abs(infoheader.height);
   res->ptr = malloc(res->width * res->height * res->channels);
 
+  fseek(file, sizeof(fileheader) + infoheader.size, SEEK_SET);
   for (i = 0; i < res->height; ++i)
   {
     length = fread(&res->ptr[i * res->width * res->channels], 1, res->width * res->channels, file);
@@ -288,16 +289,14 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   double srcyres = (double) bmp->height / height;
   if (srcxres < 1.0 || srcxres > 2.0)
   {
-    printf("image width/new width proportion should be in range 1 to 2\n");
-    printf("with image width is %d and new width is %d it will be %f\n",
-      bmp->width, width, srcxres);
+    printf("width be between %d and %d. %d given\n",
+      bmp->width / 2, bmp->width, width);
     return NULL;
   }
   if (srcyres < 1.0 || srcyres > 2.0)
   {
-    printf("image height/new height proportion should be in range 1 to 2\n");
-    printf("with image height is %d and new height is %d it will be %f\n",
-      bmp->height, height, srcyres);
+    printf("height should be between %d and %d. %d given\n",
+      bmp->height / 2, bmp->height, height);
     return NULL;
   }
 
