@@ -15,8 +15,14 @@ My current achievements:
 
 For comparison:
 * GraphicsMagick resize algorithm with Sinc filter: from 12 to 24 megapixels/s.
+* GraphicsMagick resize algorithm with Triangle filter: from 22 to 62 megapixels/s.
 * Python's PIL resize with ANTIALIAS filter (Lanczos in fact): from 11 to 22 megapixels/s.
+
+All test have been done on Intel Core i5 4258U CPU with 
+6000×3068 pixels source image.
 
 The best way to launch:
 
     gcc main.c -lm -o scale -O2 && time ./scale louvre.bmp louvre.scaled.bmp <params>
+
+Room for optimization: handle pixel at once with SSE2.
