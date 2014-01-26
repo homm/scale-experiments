@@ -41,7 +41,11 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     pdstx[x] = dst_coord * cc;
   }
 
-  #define CHANEL_COMPUTION(c) \
+  #define CHANEL_COMPUTION_1X(c) \
+    buf1[dstx + c     ] += src[xcc + c] * coof1;\
+    buf1[dstx + c + cc] += src[xcc + c] * coof2;
+
+  #define CHANEL_COMPUTION_2X(c) \
     buf1[dstx + c     ] += src[xcc + c] * coof11;\
     buf1[dstx + c + cc] += src[xcc + c] * coof12;\
     buf2[dstx + c     ] += src[xcc + c] * coof21;\
@@ -72,19 +76,34 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
         lastrow = dst_coord;
 
         src = &bmp->ptr[y * srcrow];
-        for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
+        if (ycoof2 == 0)
         {
-          uint32_t dstx = pdstx[x];
-          uint16_t xcoof1 = pdstxcoof[x*2 + 0];
-          uint16_t xcoof2 = pdstxcoof[x*2 + 1];
-          uint32_t coof11 = ycoof1 * xcoof1;
-          uint32_t coof12 = ycoof1 * xcoof2;
-          uint32_t coof21 = ycoof2 * xcoof1;
-          uint32_t coof22 = ycoof2 * xcoof2;
+          for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
+          {
+            uint32_t dstx = pdstx[x];
+            uint32_t coof1 = ycoof1 * pdstxcoof[x*2 + 0];
+            uint32_t coof2 = ycoof1 * pdstxcoof[x*2 + 1];
 
-          CHANEL_COMPUTION(0);
-          CHANEL_COMPUTION(1);
-          CHANEL_COMPUTION(2);
+            CHANEL_COMPUTION_1X(0);
+            CHANEL_COMPUTION_1X(1);
+            CHANEL_COMPUTION_1X(2);
+          }
+        } else
+        {
+          for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
+          {
+            uint32_t dstx = pdstx[x];
+            uint16_t xcoof1 = pdstxcoof[x*2 + 0];
+            uint16_t xcoof2 = pdstxcoof[x*2 + 1];
+            uint32_t coof11 = ycoof1 * xcoof1;
+            uint32_t coof12 = ycoof1 * xcoof2;
+            uint32_t coof21 = ycoof2 * xcoof1;
+            uint32_t coof22 = ycoof2 * xcoof2;
+
+            CHANEL_COMPUTION_2X(0);
+            CHANEL_COMPUTION_2X(1);
+            CHANEL_COMPUTION_2X(2);
+          }
         }
       }
       COMMIT();
@@ -97,7 +116,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   free(pdstxcoof);
   return res;
   #undef COOF_COMPUTION
-  #undef CHANEL_COMPUTION
+  #undef CHANEL_COMPUTION_1X
+  #undef CHANEL_COMPUTION_2X
   #undef COMMIT
 }
 
@@ -141,9 +161,9 @@ Bitmap fast_inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     for (x = 0, xcc = 0; x < width; x += 1, xcc += cc)\
     {\
       size_t count = county * pcountx[x];\
-      dst[xcc + 0] = buf[xcc + 0] / count;\
-      dst[xcc + 1] = buf[xcc + 1] / count;\
-      dst[xcc + 2] = buf[xcc + 2] / count;\
+      dst[xcc + 0] = (buf[xcc + 0] + (count >> 1)) / count;\
+      dst[xcc + 1] = (buf[xcc + 1] + (count >> 1)) / count;\
+      dst[xcc + 2] = (buf[xcc + 2] + (count >> 1)) / count;\
     }
 
   switch (cc)

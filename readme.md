@@ -7,8 +7,8 @@ My current achievements:
   fixed ratio (now it is 2x, 3x, 4x, 6x, 8x). The extra pixels are cut off.
 * linear.c/linear_resize_bitmap — superfast (about 195 megapixels/s) scaling
   to ratio from 1x to 2x.
-* inverse.c/inverse_resize_bitmap — fast (about 81 megapixels/s) scaling to
-  ratio from 1x. Strict algorithm which operates from a position of source image.
+* inverse.c/inverse_resize_bitmap — fast (from 100 to 150 megapixels/s)
+  scaling to ratio from 1x. Strict algorithm which operates from a position of source image.
 * inverse.c/fast_inverse_resize_bitmap — superfast (about 400 megapixels/s)
   scaling to ratio from 3x. Works similar to previos, but not so strict and
   therefore inaccurate with ration from 1x to ≈3x.

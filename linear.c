@@ -35,7 +35,7 @@ Bitmap linear_resize_bitmap(Bitmap bmp, size_t width, size_t height)
 
   #define COOF_COMPUTION(dim, res) \
     double src_coord, fract = modf(dim * res, &src_coord);\
-    double src_overlap = (dim + 1) * res - src_coord;\
+    double src_overlap = fract + res;\
     double coof1f = easing(1.0 - fract);\
     double coof2f = easing(fmin(1.0, src_overlap - 1.0));\
     double coof3f = easing(fmax(0.0, src_overlap - 2.0));\
