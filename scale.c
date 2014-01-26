@@ -384,7 +384,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   uint32_t*pdstx;
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
-  size_t lastrow = 0;
+  size_t   lastrow = 0;
 
   size_t bmp_width = bmp->width;
   double xres = (double) width / bmp->width;
@@ -478,6 +478,90 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   #undef COOF_COMPUTION
   #undef CHANEL_COMPUTION
 }
+
+
+Bitmap fast_inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
+{
+  Bitmap   res;
+  uint8_t *src, *dst;
+  uint32_t*buf, *pdstx, *pcountx;
+  size_t   srcrow, dstrow, cc;
+  size_t   x, y, xcc;
+  size_t   dsty, lastdsty = 0, county = 0;
+
+  size_t bmp_width = bmp->width;
+  double xres = (double) width / bmp->width;
+  double yres = (double) height / bmp->height;
+
+  res = (Bitmap)calloc(1, sizeof(struct Bitmap));
+  res->width = width;
+  res->height = height;
+  res->channels = bmp->channels;
+  res->ptr = malloc(res->width * res->height * res->channels);
+
+  cc = bmp->channels;
+  dstrow = res->width * cc;
+  srcrow = bmp->width * cc;
+
+  buf = calloc(width * cc, sizeof(uint32_t));
+
+  pdstx = calloc(bmp->width, sizeof(uint32_t));
+  pcountx = calloc(width, sizeof(uint32_t));
+  for (x = 0; x < bmp_width; x+= 1)
+  {
+    size_t dstx = (uint32_t)(x * xres + xres / 2);
+    pdstx[x] = dstx * cc;
+    pcountx[dstx] += 1;
+  }
+
+  #define COMMIT() \
+    dst = &res->ptr[lastdsty * dstrow];\
+    for (x = 0, xcc = 0; x < width; x += 1, xcc += cc)\
+    {\
+      size_t count = county * pcountx[x];\
+      dst[xcc + 0] = buf[xcc + 0] / count;\
+      dst[xcc + 1] = buf[xcc + 1] / count;\
+      dst[xcc + 2] = buf[xcc + 2] / count;\
+    }
+
+  switch (cc)
+  {
+    case 3:
+      for (y = 0; y < bmp->height; y++)
+      {
+        dsty = y * yres + yres / 2;
+
+        // commit
+        if (dsty > lastdsty)
+        {
+          COMMIT();
+          memset(buf, 0, sizeof(uint32_t) * width * cc);
+          county = 0;
+        }
+        lastdsty = dsty;
+        county += 1;
+
+        src = &bmp->ptr[y * srcrow];
+        for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
+        {
+          uint32_t *pix = &buf[pdstx[x]];
+          pix[0] += src[xcc + 0];
+          pix[1] += src[xcc + 1];
+          pix[2] += src[xcc + 2];
+        }
+      }
+      COMMIT();
+      break;
+  }
+
+  free(buf);
+  free(pdstx);
+  free(pcountx);
+  return res;
+  #undef COOF_COMPUTION
+  #undef CHANEL_COMPUTION
+}
+
 
 
 int main(int argc, char **argv)
