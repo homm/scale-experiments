@@ -53,9 +53,11 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
 
   #define COMMIT() \
     dst = &res->ptr[lastrow * dstrow];\
-    for (x = 0; x < dstrow; x += 1)\
+    for (x = 0; x < dstrow; x += cc)\
     {\
-      dst[x] = buf1[x] + 4096 * 4096 / 2 >> 24;\
+      dst[x + 0] = buf1[x + 0] + 4096 * 4096 / 2 >> 24;\
+      dst[x + 1] = buf1[x + 1] + 4096 * 4096 / 2 >> 24;\
+      dst[x + 2] = buf1[x + 2] + 4096 * 4096 / 2 >> 24;\
     }
 
   switch (cc)
@@ -88,7 +90,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
             CHANEL_COMPUTION_1X(1);
             CHANEL_COMPUTION_1X(2);
           }
-        } else
+        }
+        else
         {
           for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
           {
