@@ -424,6 +424,13 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     buf2[dstx + c     ] += src[xcc + c] * coof21;\
     buf2[dstx + c + cc] += src[xcc + c] * coof22;
 
+  #define COMMIT() \
+    dst = &res->ptr[lastrow * dstrow];\
+    for (x = 0; x < dstrow; x += 1)\
+    {\
+      dst[x] = buf1[x] + 4096 * 4096 / 2 >> 24;\
+    }
+
   switch (cc)
   {
     case 3:
@@ -433,14 +440,9 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
         uint16_t ycoof1 = coof1f * 4096.0 + .5;
         uint16_t ycoof2 = coof2f * 4096.0 + .5;
 
-        // commit
         if ((size_t) dst_coord > lastrow)
         {
-          dst = &res->ptr[lastrow * dstrow];
-          for (x = 0; x < dstrow; x += 1)
-          {
-            dst[x] = buf1[x] + 4096 * 4096 / 2 >> 24;
-          }
+          COMMIT();
           memset(buf1, 0, sizeof(uint32_t) * (width + 1) * cc);
           buf3 = buf1; buf1 = buf2; buf2 = buf3;
         }
@@ -462,11 +464,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
           CHANEL_COMPUTION(2);
         }
       }
-      dst = &res->ptr[lastrow * dstrow];
-      for (x = 0; x < dstrow; x += 1)
-      {
-        dst[x] = buf1[x] + 4096 * 4096 / 2 >> 24;
-      }
+      COMMIT();
       break;
   }
 
@@ -477,6 +475,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   return res;
   #undef COOF_COMPUTION
   #undef CHANEL_COMPUTION
+  #undef COMMIT
 }
 
 
@@ -531,7 +530,6 @@ Bitmap fast_inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
       {
         dsty = y * yres + yres / 2;
 
-        // commit
         if (dsty > lastdsty)
         {
           COMMIT();
@@ -589,18 +587,15 @@ int main(int argc, char **argv)
   start = clock();
   for (i = 0; i < times; ++i)
   {
-    res = bmp;
-    bmp = inverse_resize_bitmap(bmp, width - i, height - i);
-    // bmp = linear_resize_bitmap(bmp, width - i, height - i);
-    free_bitmap(res);
-    if ( ! bmp)
+    res = inverse_resize_bitmap(bmp, width, height);
+    if (i != times -1)
     {
-      return 0;
+      free_bitmap(res);
     }
   }
   time = (float)(clock() - start) / CLOCKS_PER_SEC;
 
-  save_bitmap(bmp, argv[2]);
+  save_bitmap(res, argv[2]);
 
   free_bitmap(bmp);
   printf("%d times completed in %f sec\n", times, time);
