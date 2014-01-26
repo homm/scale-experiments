@@ -5,11 +5,14 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   uint32_t*buf1, *buf2, *buf3;
   uint16_t*pdstxcoof;
   uint32_t*pdstx;
+  float   *pcoofsums;
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
   size_t   lastrow = 0;
+  double (*easing)(double) = square_easing;
 
   size_t bmp_width = bmp->width;
+  size_t bmp_height = bmp->height;
   double xres = (double) width / bmp->width;
   double yres = (double) height / bmp->height;
 
@@ -28,17 +31,36 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
 
   #define COOF_COMPUTION(dim, res) \
     double dst_coord, fract = modf(dim * res, &dst_coord);\
-    double coof1f = fmin(1.0, fract + res) - fract;\
-    double coof2f = res - coof1f;
+    double coof1f = (fmin(1.0, fract + res) - fract) / res;\
+    double coof2f = easing(1.0 - coof1f) * res;\
+    coof1f = easing(coof1f) * res;
 
+  // Precompute coofs for x
+  pcoofsums = calloc((width + 1), sizeof(float));
   pdstx = calloc(bmp->width, sizeof(uint32_t));
   pdstxcoof = calloc(bmp->width * 2, sizeof(uint16_t));
   for (x = 0; x < bmp_width; x+= 1)
   {
     COOF_COMPUTION(x, xres);
-    pdstxcoof[x*2 + 0] = coof1f * 4096.0 + .5;
-    pdstxcoof[x*2 + 1] = coof2f * 4096.0 + .5;
+    pcoofsums[(size_t)dst_coord + 0] += coof1f;
+    pcoofsums[(size_t)dst_coord + 1] += coof2f;
+  }
+  for (x = 0; x < bmp_width; x+= 1)
+  {
+    COOF_COMPUTION(x, xres);
+    pdstxcoof[x*2 + 0] = coof1f / pcoofsums[(size_t)dst_coord + 0] * 4096.0 + .5;
+    pdstxcoof[x*2 + 1] = coof2f / pcoofsums[(size_t)dst_coord + 1] * 4096.0 + .5;
     pdstx[x] = dst_coord * cc;
+  }
+  free(pcoofsums);
+
+  // Precompute coofs for y
+  pcoofsums = calloc((height + 1), sizeof(float));
+  for (y = 0; y < bmp_height; y+= 1)
+  {
+    COOF_COMPUTION(y, yres);
+    pcoofsums[(size_t)dst_coord + 0] += coof1f;
+    pcoofsums[(size_t)dst_coord + 1] += coof2f;
   }
 
   #define CHANEL_COMPUTION_1X(c) \
@@ -63,11 +85,11 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   switch (cc)
   {
     case 3:
-      for (y = 0; y < bmp->height; y++)
+      for (y = 0; y < bmp_height; y++)
       {
         COOF_COMPUTION(y, yres);
-        uint16_t ycoof1 = coof1f * 4096.0 + .5;
-        uint16_t ycoof2 = coof2f * 4096.0 + .5;
+        uint16_t ycoof1 = coof1f / pcoofsums[(size_t)dst_coord + 0] * 4096.0 + .5;
+        uint16_t ycoof2 = coof2f / pcoofsums[(size_t)dst_coord + 1] * 4096.0 + .5;
 
         if ((size_t) dst_coord > lastrow)
         {
@@ -113,6 +135,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
       break;
   }
 
+  free(pcoofsums);
   free(buf1);
   free(buf2);
   free(pdstx);
