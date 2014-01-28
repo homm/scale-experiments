@@ -9,7 +9,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
   size_t   lastrow = 0;
-  double (*easing)(double) = square_easing;
+  double (*easing)(double) = linear_easing;
 
   size_t bmp_width = bmp->width;
   size_t bmp_height = bmp->height;
@@ -26,8 +26,12 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   dstrow = res->width * cc;
   srcrow = bmp->width * cc;
 
-  buf1 = calloc((width + 1) * cc, sizeof(uint32_t));
-  buf2 = calloc((width + 1) * cc, sizeof(uint32_t));
+  x = posix_memalign((void**)&buf1, 16, (width + 2) * 4 * sizeof(uint32_t));
+  y = posix_memalign((void**)&buf2, 16, (width + 2) * 4 * sizeof(uint32_t));
+  memset(buf1, 0, sizeof(uint32_t) * (width + 2) * 4);
+  memset(buf2, 0, sizeof(uint32_t) * (width + 2) * 4);
+  // buf1 = calloc((width + 2) * 4, sizeof(uint32_t));
+  // buf2 = calloc((width + 2) * 4, sizeof(uint32_t));
 
   #define COOF_COMPUTION(dim, res) \
     double dst_coord, fract = modf(dim * res, &dst_coord);\
@@ -50,7 +54,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     COOF_COMPUTION(x, xres);
     pdstxcoof[x*2 + 0] = coof1f / pcoofsums[(size_t)dst_coord + 0] * 4096.0;
     pdstxcoof[x*2 + 1] = coof2f / pcoofsums[(size_t)dst_coord + 1] * 4096.0;
-    pdstx[x] = dst_coord * cc;
+    pdstx[x] = dst_coord * 4;
   }
   free(pcoofsums);
 
@@ -63,23 +67,19 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     pcoofsums[(size_t)dst_coord + 1] += coof2f;
   }
 
-  #define CHANEL_COMPUTION_1X(c) \
-    buf1[dstx + c     ] += src[xcc + c] * coof1;\
-    buf1[dstx + c + cc] += src[xcc + c] * coof2;
-
   #define CHANEL_COMPUTION_2X(c) \
-    buf1[dstx + c     ] += src[xcc + c] * coof11;\
-    buf1[dstx + c + cc] += src[xcc + c] * coof12;\
-    buf2[dstx + c     ] += src[xcc + c] * coof21;\
-    buf2[dstx + c + cc] += src[xcc + c] * coof22;
+    buf1[dstx + c    ] += src[xcc + c] * coof11;\
+    buf1[dstx + c + 4] += src[xcc + c] * coof12;\
+    buf2[dstx + c    ] += src[xcc + c] * coof21;\
+    buf2[dstx + c + 4] += src[xcc + c] * coof22;
 
   #define COMMIT() \
     dst = &res->ptr[lastrow * dstrow];\
-    for (x = 0; x < dstrow; x += cc)\
+    for (x = 0; x < width; x += 1)\
     {\
-      dst[x + 0] = buf1[x + 0] + 4096 * 4096 / 2 >> 24;\
-      dst[x + 1] = buf1[x + 1] + 4096 * 4096 / 2 >> 24;\
-      dst[x + 2] = buf1[x + 2] + 4096 * 4096 / 2 >> 24;\
+      dst[x*cc + 0] = buf1[x*4 + 0] + 4096 * 4096 / 2 >> 24;\
+      dst[x*cc + 1] = buf1[x*4 + 1] + 4096 * 4096 / 2 >> 24;\
+      dst[x*cc + 2] = buf1[x*4 + 2] + 4096 * 4096 / 2 >> 24;\
     }
 
   switch (cc)
@@ -94,7 +94,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
         if ((size_t) dst_coord > lastrow)
         {
           COMMIT();
-          memset(buf1, 0, sizeof(uint32_t) * (width + 1) * cc);
+          memset(buf1, 0, sizeof(uint32_t) * (width + 2) * 4);
           buf3 = buf1; buf1 = buf2; buf2 = buf3;
         }
         lastrow = dst_coord;
@@ -105,12 +105,30 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
           for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
           {
             uint32_t dstx = pdstx[x];
-            uint32_t coof1 = ycoof1 * pdstxcoof[x*2 + 0];
-            uint32_t coof2 = ycoof1 * pdstxcoof[x*2 + 1];
 
-            CHANEL_COMPUTION_1X(0);
-            CHANEL_COMPUTION_1X(1);
-            CHANEL_COMPUTION_1X(2);
+            // uint32_t coof1 = ycoof1 * pdstxcoof[x*2 + 0];
+            // buf1[dstx + 0] += src[xcc + 0] * coof1;
+            // buf1[dstx + 1] += src[xcc + 1] * coof1;
+            // buf1[dstx + 2] += src[xcc + 2] * coof1;
+            
+            // uint32_t coof2 = ycoof1 * pdstxcoof[x*2 + 1];
+            // buf1[dstx + 0 + 4] += src[xcc + 0] * coof2;
+            // buf1[dstx + 1 + 4] += src[xcc + 1] * coof2;
+            // buf1[dstx + 2 + 4] += src[xcc + 2] * coof2;
+
+            __m128i xmm1 = _mm_cvtsi32_si128(*(int *)&src[xcc]);
+            __m128i coof = _mm_set1_epi32(ycoof1 * pdstxcoof[x*2 + 0]);
+            __m128i xmm2 = _mm_loadu_si128((__m128i*) &buf1[dstx]);
+            __m128i tmp1 = _mm_cvtepu8_epi32(xmm1);
+            __m128i tmp2 = _mm_mullo_epi32(tmp1, coof);
+            __m128i tmp3 = _mm_add_epi32(xmm2, tmp2);
+            _mm_storeu_si128((__m128i*) &buf1[dstx], tmp3);
+
+            coof = _mm_set1_epi32(ycoof1 * pdstxcoof[x*2 + 1]);
+            xmm2 = _mm_loadu_si128((__m128i*) &buf1[dstx + 4]);
+            tmp2 = _mm_mullo_epi32(tmp1, coof);
+            tmp3 = _mm_add_epi32(xmm2, tmp2);
+            _mm_storeu_si128((__m128i*) &buf1[dstx + 4], tmp3);
           }
         }
         else
@@ -120,14 +138,44 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
             uint32_t dstx = pdstx[x];
             uint16_t xcoof1 = pdstxcoof[x*2 + 0];
             uint16_t xcoof2 = pdstxcoof[x*2 + 1];
-            uint32_t coof11 = ycoof1 * xcoof1;
-            uint32_t coof12 = ycoof1 * xcoof2;
-            uint32_t coof21 = ycoof2 * xcoof1;
-            uint32_t coof22 = ycoof2 * xcoof2;
 
-            CHANEL_COMPUTION_2X(0);
-            CHANEL_COMPUTION_2X(1);
-            CHANEL_COMPUTION_2X(2);
+            // uint32_t coof11 = ycoof1 * xcoof1;
+            // uint32_t coof12 = ycoof1 * xcoof2;
+            // uint32_t coof21 = ycoof2 * xcoof1;
+            // uint32_t coof22 = ycoof2 * xcoof2;
+
+            // CHANEL_COMPUTION_2X(0);
+            // CHANEL_COMPUTION_2X(1);
+            // CHANEL_COMPUTION_2X(2);
+
+            __m128i xmm1 = _mm_cvtsi32_si128(*(int *)&src[xcc]);
+            __m128i coof = _mm_set1_epi32(ycoof1 * xcoof1);
+            __m128i xmm2 = _mm_loadu_si128((__m128i*) &buf1[dstx]);
+            __m128i tmp1 = _mm_cvtepu8_epi32(xmm1);
+            __m128i tmp2 = _mm_mullo_epi32(tmp1, coof);
+            __m128i tmp3 = _mm_add_epi32(xmm2, tmp2);
+            _mm_storeu_si128((__m128i*) &buf1[dstx], tmp3);
+
+            coof = _mm_set1_epi32(ycoof2 * xcoof1);
+            xmm2 = _mm_loadu_si128((__m128i*) &buf2[dstx]);
+            tmp2 = _mm_mullo_epi32(tmp1, coof);
+            tmp3 = _mm_add_epi32(xmm2, tmp2);
+            _mm_storeu_si128((__m128i*) &buf2[dstx], tmp3);
+
+            if (xcoof2)
+            {
+              coof = _mm_set1_epi32(ycoof1 * xcoof2);
+              xmm2 = _mm_loadu_si128((__m128i*) &buf1[dstx + 4]);
+              tmp2 = _mm_mullo_epi32(tmp1, coof);
+              tmp3 = _mm_add_epi32(xmm2, tmp2);
+              _mm_storeu_si128((__m128i*) &buf1[dstx + 4], tmp3);
+
+              coof = _mm_set1_epi32(ycoof2 * xcoof2);
+              xmm2 = _mm_loadu_si128((__m128i*) &buf2[dstx + 4]);
+              tmp2 = _mm_mullo_epi32(tmp1, coof);
+              tmp3 = _mm_add_epi32(xmm2, tmp2);
+              _mm_storeu_si128((__m128i*) &buf2[dstx + 4], tmp3);
+            }
           }
         }
       }
@@ -142,7 +190,6 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   free(pdstxcoof);
   return res;
   #undef COOF_COMPUTION
-  #undef CHANEL_COMPUTION_1X
   #undef CHANEL_COMPUTION_2X
   #undef COMMIT
 }

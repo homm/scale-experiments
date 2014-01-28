@@ -51,4 +51,4 @@ still has 4x and more performance then any alternatives.
     gcc main.c -lm -o scale -O2 && time ./scale louvre.bmp louvre.scaled.bmp <params>
 
 #### Room for optimization
-Handle pixel at once with SSE2.
+With sse4.1 inverse_resize_bitmap gives from 158 to 264 mb/s.
