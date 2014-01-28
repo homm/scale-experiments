@@ -52,8 +52,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   for (x = 0; x < bmp_width; x+= 1)
   {
     COOF_COMPUTION(x, xres);
-    pdstxcoof[x*2 + 0] = coof1f / pcoofsums[(size_t)dst_coord + 0] * 4096.0;
-    pdstxcoof[x*2 + 1] = coof2f / pcoofsums[(size_t)dst_coord + 1] * 4096.0;
+    pdstxcoof[x*2 + 0] = coof1f / pcoofsums[(size_t)dst_coord + 0] * 256.0 * 256.0;
+    pdstxcoof[x*2 + 1] = coof2f / pcoofsums[(size_t)dst_coord + 1] * 256.0 * 256.0;
     pdstx[x] = dst_coord * 4;
   }
   free(pcoofsums);
@@ -88,8 +88,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
       for (y = 0; y < bmp_height; y++)
       {
         COOF_COMPUTION(y, yres);
-        uint16_t ycoof1 = coof1f / pcoofsums[(size_t)dst_coord + 0] * 4096.0;
-        uint16_t ycoof2 = coof2f / pcoofsums[(size_t)dst_coord + 1] * 4096.0;
+        uint16_t ycoof1 = coof1f / pcoofsums[(size_t)dst_coord + 0] * 256.0 * 256.0;
+        uint16_t ycoof2 = coof2f / pcoofsums[(size_t)dst_coord + 1] * 256.0 * 256.0;
 
         if ((size_t) dst_coord > lastrow)
         {
@@ -119,12 +119,12 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
             __m128i tmp1 = _mm_cvtsi32_si128(*(int *)&src[xcc]);
             __m128i xmm1 = _mm_cvtepu8_epi32(tmp1);
             
-            __m128i coof = _mm_set1_epi32(ycoof1 * pdstxcoof[x*2 + 0]);
+            __m128i coof = _mm_set1_epi32((ycoof1 * pdstxcoof[x*2 + 0]) >> 8);
             __m128i tmp2 = _mm_mullo_epi32(coof, xmm1);
             __m128i xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf1[dstx]);
             _mm_storeu_si128((__m128i*) &buf1[dstx], xmm2);
 
-            coof = _mm_set1_epi32(ycoof1 * pdstxcoof[x*2 + 1]);
+            coof = _mm_set1_epi32((ycoof1 * pdstxcoof[x*2 + 1]) >> 8);
             tmp2 = _mm_mullo_epi32(coof, xmm1);
             xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf1[dstx + 4]);
             _mm_storeu_si128((__m128i*) &buf1[dstx + 4], xmm2);
@@ -150,24 +150,24 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
             __m128i tmp1 = _mm_cvtsi32_si128(*(int *)&src[xcc]);
             __m128i xmm1 = _mm_cvtepu8_epi32(tmp1);
             
-            __m128i coof = _mm_set1_epi32(ycoof1 * xcoof1);
+            __m128i coof = _mm_set1_epi32((ycoof1 * xcoof1) >> 8);
             __m128i tmp2 = _mm_mullo_epi32(coof, xmm1);
             __m128i xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf1[dstx]);
             _mm_storeu_si128((__m128i*) &buf1[dstx], xmm2);
 
-            coof = _mm_set1_epi32(ycoof2 * xcoof1);
+            coof = _mm_set1_epi32((ycoof2 * xcoof1) >> 8);
             tmp2 = _mm_mullo_epi32(coof, xmm1);
             xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf2[dstx]);
             _mm_storeu_si128((__m128i*) &buf2[dstx], xmm2);
 
             if (xcoof2)
             {
-              coof = _mm_set1_epi32(ycoof1 * xcoof2);
+              coof = _mm_set1_epi32((ycoof1 * xcoof2) >> 8);
               tmp2 = _mm_mullo_epi32(coof, xmm1);
               xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf1[dstx + 4]);
               _mm_storeu_si128((__m128i*) &buf1[dstx + 4], xmm2);
 
-              coof = _mm_set1_epi32(ycoof2 * xcoof2);
+              coof = _mm_set1_epi32((ycoof2 * xcoof2) >> 8);
               tmp2 = _mm_mullo_epi32(coof, xmm1);
               xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf2[dstx + 4]);
               _mm_storeu_si128((__m128i*) &buf2[dstx + 4], xmm2);
