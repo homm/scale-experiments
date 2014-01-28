@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
+#include <emmintrin.h>
+#include <mmintrin.h>
+#include <smmintrin.h>
 
 
 typedef struct

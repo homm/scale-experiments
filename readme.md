@@ -20,7 +20,7 @@ scale algorithms.
 * GraphicsMagick resize with Triangle filter: from 22 to 62 megapixels/s.
 * Python's PIL resize with Lanczos filter: from 11 to 22 megapixels/s.
 * PHP-GD imagecopyresampled function: from 13.5 to 41 megapixels/s.
-* AMD Framewave multisample resize: from 34 to 62.5 megapixels/s.
+* AMD Framewave supersampling resize: from 34 to 62.5 megapixels/s.
 
 All test have been done on Intel Core i5 4258U CPU with 
 6000×3068 pixels source image.
