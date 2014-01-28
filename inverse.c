@@ -116,19 +116,18 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
             // buf1[dstx + 1 + 4] += src[xcc + 1] * coof2;
             // buf1[dstx + 2 + 4] += src[xcc + 2] * coof2;
 
-            __m128i xmm1 = _mm_cvtsi32_si128(*(int *)&src[xcc]);
+            __m128i tmp1 = _mm_cvtsi32_si128(*(int *)&src[xcc]);
+            __m128i xmm1 = _mm_cvtepu8_epi32(tmp1);
+            
             __m128i coof = _mm_set1_epi32(ycoof1 * pdstxcoof[x*2 + 0]);
-            __m128i xmm2 = _mm_loadu_si128((__m128i*) &buf1[dstx]);
-            __m128i tmp1 = _mm_cvtepu8_epi32(xmm1);
-            __m128i tmp2 = _mm_mullo_epi32(tmp1, coof);
-            __m128i tmp3 = _mm_add_epi32(xmm2, tmp2);
-            _mm_storeu_si128((__m128i*) &buf1[dstx], tmp3);
+            __m128i tmp2 = _mm_mullo_epi32(coof, xmm1);
+            __m128i xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf1[dstx]);
+            _mm_storeu_si128((__m128i*) &buf1[dstx], xmm2);
 
             coof = _mm_set1_epi32(ycoof1 * pdstxcoof[x*2 + 1]);
-            xmm2 = _mm_loadu_si128((__m128i*) &buf1[dstx + 4]);
-            tmp2 = _mm_mullo_epi32(tmp1, coof);
-            tmp3 = _mm_add_epi32(xmm2, tmp2);
-            _mm_storeu_si128((__m128i*) &buf1[dstx + 4], tmp3);
+            tmp2 = _mm_mullo_epi32(coof, xmm1);
+            xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf1[dstx + 4]);
+            _mm_storeu_si128((__m128i*) &buf1[dstx + 4], xmm2);
           }
         }
         else
@@ -148,33 +147,30 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
             // CHANEL_COMPUTION_2X(1);
             // CHANEL_COMPUTION_2X(2);
 
-            __m128i xmm1 = _mm_cvtsi32_si128(*(int *)&src[xcc]);
+            __m128i tmp1 = _mm_cvtsi32_si128(*(int *)&src[xcc]);
+            __m128i xmm1 = _mm_cvtepu8_epi32(tmp1);
+            
             __m128i coof = _mm_set1_epi32(ycoof1 * xcoof1);
-            __m128i xmm2 = _mm_loadu_si128((__m128i*) &buf1[dstx]);
-            __m128i tmp1 = _mm_cvtepu8_epi32(xmm1);
-            __m128i tmp2 = _mm_mullo_epi32(tmp1, coof);
-            __m128i tmp3 = _mm_add_epi32(xmm2, tmp2);
-            _mm_storeu_si128((__m128i*) &buf1[dstx], tmp3);
+            __m128i tmp2 = _mm_mullo_epi32(coof, xmm1);
+            __m128i xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf1[dstx]);
+            _mm_storeu_si128((__m128i*) &buf1[dstx], xmm2);
 
             coof = _mm_set1_epi32(ycoof2 * xcoof1);
-            xmm2 = _mm_loadu_si128((__m128i*) &buf2[dstx]);
-            tmp2 = _mm_mullo_epi32(tmp1, coof);
-            tmp3 = _mm_add_epi32(xmm2, tmp2);
-            _mm_storeu_si128((__m128i*) &buf2[dstx], tmp3);
+            tmp2 = _mm_mullo_epi32(coof, xmm1);
+            xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf2[dstx]);
+            _mm_storeu_si128((__m128i*) &buf2[dstx], xmm2);
 
             if (xcoof2)
             {
               coof = _mm_set1_epi32(ycoof1 * xcoof2);
-              xmm2 = _mm_loadu_si128((__m128i*) &buf1[dstx + 4]);
-              tmp2 = _mm_mullo_epi32(tmp1, coof);
-              tmp3 = _mm_add_epi32(xmm2, tmp2);
-              _mm_storeu_si128((__m128i*) &buf1[dstx + 4], tmp3);
+              tmp2 = _mm_mullo_epi32(coof, xmm1);
+              xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf1[dstx + 4]);
+              _mm_storeu_si128((__m128i*) &buf1[dstx + 4], xmm2);
 
               coof = _mm_set1_epi32(ycoof2 * xcoof2);
-              xmm2 = _mm_loadu_si128((__m128i*) &buf2[dstx + 4]);
-              tmp2 = _mm_mullo_epi32(tmp1, coof);
-              tmp3 = _mm_add_epi32(xmm2, tmp2);
-              _mm_storeu_si128((__m128i*) &buf2[dstx + 4], tmp3);
+              tmp2 = _mm_mullo_epi32(coof, xmm1);
+              xmm2 = _mm_add_epi32(tmp2, *(__m128i*) &buf2[dstx + 4]);
+              _mm_storeu_si128((__m128i*) &buf2[dstx + 4], xmm2);
             }
           }
         }
