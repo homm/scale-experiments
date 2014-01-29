@@ -77,9 +77,9 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
     dst = &res->ptr[lastrow * dstrow];\
     for (x = 0; x < dstrow; x += cc)\
     {\
-      dst[x + 0] = buf1[x + 0] + 4096 * 4096 / 2 >> 24;\
-      dst[x + 1] = buf1[x + 1] + 4096 * 4096 / 2 >> 24;\
-      dst[x + 2] = buf1[x + 2] + 4096 * 4096 / 2 >> 24;\
+      dst[x + 0] = (buf1[x + 0] + 4096 * 4096 / 2) >> 24;\
+      dst[x + 1] = (buf1[x + 1] + 4096 * 4096 / 2) >> 24;\
+      dst[x + 2] = (buf1[x + 2] + 4096 * 4096 / 2) >> 24;\
     }
 
   switch (cc)
@@ -105,8 +105,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
           for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
           {
             uint32_t dstx = pdstx[x];
-            uint32_t coof1 = (ycoof1 * pdstxcoof[x*2 + 0]) >> 8;
-            uint32_t coof2 = (ycoof1 * pdstxcoof[x*2 + 1]) >> 8;
+            uint32_t coof1 = (uint32_t)(ycoof1 * pdstxcoof[x*2 + 0]) >> 8;
+            uint32_t coof2 = (uint32_t)(ycoof1 * pdstxcoof[x*2 + 1]) >> 8;
 
             CHANEL_COMPUTION_1X(0);
             CHANEL_COMPUTION_1X(1);
@@ -120,10 +120,10 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
             uint32_t dstx = pdstx[x];
             uint16_t xcoof1 = pdstxcoof[x*2 + 0];
             uint16_t xcoof2 = pdstxcoof[x*2 + 1];
-            uint32_t coof11 = (ycoof1 * xcoof1) >> 8;
-            uint32_t coof12 = (ycoof1 * xcoof2) >> 8;
-            uint32_t coof21 = (ycoof2 * xcoof1) >> 8;
-            uint32_t coof22 = (ycoof2 * xcoof2) >> 8;
+            uint32_t coof11 = (uint32_t)(ycoof1 * xcoof1) >> 8;
+            uint32_t coof12 = (uint32_t)(ycoof1 * xcoof2) >> 8;
+            uint32_t coof21 = (uint32_t)(ycoof2 * xcoof1) >> 8;
+            uint32_t coof22 = (uint32_t)(ycoof2 * xcoof2) >> 8;
 
             CHANEL_COMPUTION_2X(0);
             CHANEL_COMPUTION_2X(1);
