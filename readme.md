@@ -3,7 +3,7 @@ There is simple 24bit `.bmp` decoder/encoder and number of
 scale algorithms.
 
 #### Current achievements
-* scale.c/scale_bitmap — upltafast (about 1100 megapixels/s) scaling to
+* scale.c/scale_bitmap — ultrafast (about 1100 megapixels/s) scaling to
   fixed ratio (now it is 2x, 3x, 4x, 6x, 8x). Extra pixels are cut off.
 * linear.c/linear_resize_bitmap — superfast (about 195 megapixels/s) scaling
   to ratio from 1x to 2x.
@@ -12,7 +12,7 @@ scale algorithms.
   a position of source image. After 16x precision can dramatically fall.
 * inverse.c/fast_inverse_resize_bitmap — superfast (about 400 megapixels/s)
   scaling to ratio from 3x. Works similar to previos, but not so strict and
-  therefore inaccurate with ration from 1x to ≈3x. Have no problems
+  therefore inaccurate with ratio from 1x to ≈3x. Have no problems
   on extreme high ratio.
 
 #### Other libraries
@@ -20,7 +20,7 @@ scale algorithms.
 * GraphicsMagick resize with Triangle filter: from 22 to 62 megapixels/s.
 * Python's PIL resize with Lanczos filter: from 11 to 22 megapixels/s.
 * PHP-GD imagecopyresampled function: from 13.5 to 41 megapixels/s.
-* AMD Framewave multisample resize: from 34 to 62.5 megapixels/s.
+* AMD Framewave supersampling resize: from 34 to 62.5 megapixels/s.
 
 All test have been done on Intel Core i5 4258U CPU with 
 6000×3068 pixels source image.
@@ -51,4 +51,4 @@ still has 4x and more performance then any alternatives.
     gcc main.c -lm -o scale -O2 && time ./scale louvre.bmp louvre.scaled.bmp <params>
 
 #### Room for optimization
-Handle pixel at once with SSE2.
+With sse4.1 inverse_resize_bitmap gives from 150 to 280 mb/s.

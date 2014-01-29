@@ -9,7 +9,7 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   size_t   srcrow, dstrow, cc;
   size_t   x, y, xcc;
   size_t   lastrow = 0;
-  double (*easing)(double) = square_easing;
+  double (*easing)(double) = linear_easing;
 
   size_t bmp_width = bmp->width;
   size_t bmp_height = bmp->height;
@@ -48,8 +48,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   for (x = 0; x < bmp_width; x+= 1)
   {
     COOF_COMPUTION(x, xres);
-    pdstxcoof[x*2 + 0] = coof1f / pcoofsums[(size_t)dst_coord + 0] * 4096.0;
-    pdstxcoof[x*2 + 1] = coof2f / pcoofsums[(size_t)dst_coord + 1] * 4096.0;
+    pdstxcoof[x*2 + 0] = coof1f / pcoofsums[(size_t)dst_coord + 0] * 256.0 * 256.0;
+    pdstxcoof[x*2 + 1] = coof2f / pcoofsums[(size_t)dst_coord + 1] * 256.0 * 256.0;
     pdstx[x] = dst_coord * cc;
   }
   free(pcoofsums);
@@ -88,8 +88,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
       for (y = 0; y < bmp_height; y++)
       {
         COOF_COMPUTION(y, yres);
-        uint16_t ycoof1 = coof1f / pcoofsums[(size_t)dst_coord + 0] * 4096.0;
-        uint16_t ycoof2 = coof2f / pcoofsums[(size_t)dst_coord + 1] * 4096.0;
+        uint16_t ycoof1 = coof1f / pcoofsums[(size_t)dst_coord + 0] * 256.0 * 256.0;
+        uint16_t ycoof2 = coof2f / pcoofsums[(size_t)dst_coord + 1] * 256.0 * 256.0;
 
         if ((size_t) dst_coord > lastrow)
         {
@@ -105,8 +105,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
           for (x = 0, xcc = 0; x < bmp_width; x += 1, xcc += cc)
           {
             uint32_t dstx = pdstx[x];
-            uint32_t coof1 = ycoof1 * pdstxcoof[x*2 + 0];
-            uint32_t coof2 = ycoof1 * pdstxcoof[x*2 + 1];
+            uint32_t coof1 = (ycoof1 * pdstxcoof[x*2 + 0]) >> 8;
+            uint32_t coof2 = (ycoof1 * pdstxcoof[x*2 + 1]) >> 8;
 
             CHANEL_COMPUTION_1X(0);
             CHANEL_COMPUTION_1X(1);
@@ -120,10 +120,10 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
             uint32_t dstx = pdstx[x];
             uint16_t xcoof1 = pdstxcoof[x*2 + 0];
             uint16_t xcoof2 = pdstxcoof[x*2 + 1];
-            uint32_t coof11 = ycoof1 * xcoof1;
-            uint32_t coof12 = ycoof1 * xcoof2;
-            uint32_t coof21 = ycoof2 * xcoof1;
-            uint32_t coof22 = ycoof2 * xcoof2;
+            uint32_t coof11 = (ycoof1 * xcoof1) >> 8;
+            uint32_t coof12 = (ycoof1 * xcoof2) >> 8;
+            uint32_t coof21 = (ycoof2 * xcoof1) >> 8;
+            uint32_t coof22 = (ycoof2 * xcoof2) >> 8;
 
             CHANEL_COMPUTION_2X(0);
             CHANEL_COMPUTION_2X(1);
