@@ -1,4 +1,4 @@
-Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
+Bitmap inverse_resize_bitmap(Bitmap bmp, uint32_t width, uint32_t height)
 {
   Bitmap   res;
   uint8_t *src, *dst;
@@ -6,15 +6,15 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   float   *pcoofsums;
   uint32_t*pdstx;
   uint16_t*pdstxcoof;
-  size_t   srcrow, dstrow, cc;
-  size_t   x, y, xcc;
-  size_t   lastrow = 0;
+  int      srcrow, dstrow, cc;
+  int      x, y, xcc;
+  int      lastrow = 0;
   double (*easing)(double) = linear_easing;
 
-  size_t bmp_width = bmp->width;
-  size_t bmp_height = bmp->height;
-  double xres = (double) width / bmp->width;
-  double yres = (double) height / bmp->height;
+  int      bmp_width = bmp->width;
+  int      bmp_height = bmp->height;
+  double   xres = (double) width / bmp->width;
+  double   yres = (double) height / bmp->height;
 
   res = (Bitmap)calloc(1, sizeof(struct Bitmap));
   res->width = width;
@@ -42,14 +42,14 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   for (x = 0; x < bmp_width; x+= 1)
   {
     COOF_COMPUTION(x, xres);
-    pcoofsums[(size_t)dst_coord + 0] += coof1f;
-    pcoofsums[(size_t)dst_coord + 1] += coof2f;
+    pcoofsums[(int)dst_coord + 0] += coof1f;
+    pcoofsums[(int)dst_coord + 1] += coof2f;
   }
   for (x = 0; x < bmp_width; x+= 1)
   {
     COOF_COMPUTION(x, xres);
-    pdstxcoof[x*2 + 0] = coof1f / pcoofsums[(size_t)dst_coord + 0] * 256.0 * 256.0;
-    pdstxcoof[x*2 + 1] = coof2f / pcoofsums[(size_t)dst_coord + 1] * 256.0 * 256.0;
+    pdstxcoof[x*2 + 0] = coof1f / pcoofsums[(int)dst_coord + 0] * 256.0 * 256.0;
+    pdstxcoof[x*2 + 1] = coof2f / pcoofsums[(int)dst_coord + 1] * 256.0 * 256.0;
     pdstx[x] = dst_coord * cc;
   }
   free(pcoofsums);
@@ -59,8 +59,8 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
   for (y = 0; y < bmp_height; y+= 1)
   {
     COOF_COMPUTION(y, yres);
-    pcoofsums[(size_t)dst_coord + 0] += coof1f;
-    pcoofsums[(size_t)dst_coord + 1] += coof2f;
+    pcoofsums[(int)dst_coord + 0] += coof1f;
+    pcoofsums[(int)dst_coord + 1] += coof2f;
   }
 
   #define CHANEL_COMPUTION_1X(c) \
@@ -88,10 +88,10 @@ Bitmap inverse_resize_bitmap(Bitmap bmp, size_t width, size_t height)
       for (y = 0; y < bmp_height; y++)
       {
         COOF_COMPUTION(y, yres);
-        uint16_t ycoof1 = coof1f / pcoofsums[(size_t)dst_coord + 0] * 256.0 * 256.0;
-        uint16_t ycoof2 = coof2f / pcoofsums[(size_t)dst_coord + 1] * 256.0 * 256.0;
+        uint16_t ycoof1 = coof1f / pcoofsums[(int)dst_coord + 0] * 256.0 * 256.0;
+        uint16_t ycoof2 = coof2f / pcoofsums[(int)dst_coord + 1] * 256.0 * 256.0;
 
-        if ((size_t) dst_coord > lastrow)
+        if ((int) dst_coord > lastrow)
         {
           COMMIT();
           memset(buf1, 0, sizeof(uint32_t) * (width + 1) * cc);

@@ -10,32 +10,32 @@
 typedef struct
 { 
   char     type[2];
-  size_t   size;
+  uint32_t size;
   uint16_t reserved1; 
   uint16_t reserved2; 
   uint32_t offBits;
-} __attribute__((packed)) BITMAPFILEHEADER;
+}  __attribute__((packed)) BITMAPFILEHEADER;
 
 typedef struct 
 {
-  size_t   size; 
-  size_t   width; 
-  size_t   height; 
+  uint32_t size; 
+  int32_t  width; 
+  int32_t  height; 
   uint16_t planes; 
   uint16_t bitCount; 
   uint32_t compression; 
   uint32_t sizeImage; 
-  size_t   xPelsPerMeter; 
-  size_t   yPelsPerMeter; 
+  uint32_t  xPelsPerMeter; 
+  uint32_t  yPelsPerMeter; 
   uint32_t clrUsed; 
   uint32_t clrImportant; 
 } __attribute__((packed)) BITMAPINFOHEADER;
 
 typedef struct Bitmap
 {
-  size_t   width;
-  size_t   height;
-  size_t   channels;
+  uint32_t width;
+  uint32_t height;
+  uint32_t channels;
   uint8_t *ptr;
 } *Bitmap;
 
@@ -107,8 +107,8 @@ double linear_easing(double x) { return x; }
 double square_easing(double x) { return x * x; }
 double cubic_easing(double x) { return x * x * x; }
 
-#include "scale.c"
-#include "linear.c"
+// #include "scale.c"
+// #include "linear.c"
 #include "inverse.c"
 
 
@@ -137,7 +137,7 @@ int main(int argc, char **argv)
   start = clock();
   for (i = 0; i < times; ++i)
   {
-    res = fast_inverse_resize_bitmap(bmp, width, height);
+    res = inverse_resize_bitmap(bmp, width, height);
     if (i != times -1)
     {
       free_bitmap(res);
